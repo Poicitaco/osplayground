@@ -1,0 +1,3 @@
+/mnt/c/Users/itent/Desktop/OSPlayground/build/CMakeFiles/osplayground.dir
+/mnt/c/Users/itent/Desktop/OSPlayground/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/itent/Desktop/OSPlayground/build/CMakeFiles/rebuild_cache.dir

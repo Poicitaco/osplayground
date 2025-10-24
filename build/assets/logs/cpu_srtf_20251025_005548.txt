@@ -1,0 +1,4 @@
+[CPU Run] 20251025_005548
+Algo: srtf 
+Dataset: (P1:0,10,prio=2) (P2:0,5,prio=1) (P3:0,8,prio=3) 
+AWT=6 ATT=13.6667

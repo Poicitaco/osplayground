@@ -1,6 +1,9 @@
 #!/bin/bash
+set -e
 mkdir -p build && cd build
 cmake ..
-make -j$(nproc)
+cmake --build . -j
 cd ..
-echo "Build completed."
+echo "Build xong."
+echo "Run demo bằng lệnh: ./scripts/run_demo.sh"
+./scripts/run_demo.sh

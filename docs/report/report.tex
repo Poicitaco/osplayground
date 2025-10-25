@@ -1,0 +1,615 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper]{report}
+
+% Geometry and typesetting
+\usepackage[a4paper,left=3cm,right=2cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,shapes.multipart}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{caption}
+
+% Vietnamese with XeLaTeX
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+% Fonts (prefer Times New Roman if available)
+\newfontfamily\vnmain{Times New Roman}[Scale=1.0]
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+\setmonofont{Fira Code}
+% Fall back if Times/Arial missing on Overleaf
+\IfFontExistsTF{Times New Roman}{}{\setmainfont{TeX Gyre Termes}}
+\IfFontExistsTF{Arial}{}{\setsansfont{TeX Gyre Heros}}
+\IfFontExistsTF{Fira Code}{}{\setmonofont{Inconsolata}}
+
+% Listings setup
+\lstset{basicstyle=\ttfamily\small,breaklines=true,frame=single,rulecolor=\color{black!40},numbers=left,numberstyle=\tiny,keywordstyle=\bfseries\color{blue!60!black},commentstyle=\itshape\color{green!40!black},stringstyle=\color{red!60!black}}
+
+% Metadata macros (edit for your university)
+\newcommand{\university}{TRƯỜNG ĐẠI HỌC …}
+\newcommand{\faculty}{KHOA …}
+\newcommand{\course}{MÔN: Hệ điều hành}
+\newcommand{\reporttitle}{OSPlayground – Vũ trụ mô phỏng hệ điều hành}
+\newcommand{\studentname}{Họ và tên SV}
+\newcommand{\studentid}{MSSV}
+\newcommand{\instructor}{GVHD}
+\newcommand{\dateofreport}{\today}
+
+% Figure helper to box content (avoid crop at margins)
+\newcommand{\boxedfigure}[2][0.95\textwidth]{%
+  \begin{center}
+    \fbox{\begin{minipage}{#1}\centering #2\end{minipage}}%
+  \end{center}}
+
+\begin{document}
+
+% Cover page
+\begin{titlepage}
+  \begin{center}
+    {\Large \textbf{\university}}\\[4pt]
+    {\large \textbf{\faculty}}\\[20pt]
+    {\large \course}\\[24pt]
+    \rule{0.8\linewidth}{0.6pt}\\[12pt]
+    {\LARGE \textbf{\reporttitle}}\\[8pt]
+    {\large Báo cáo đồ án – Bản đầy đủ}\
+    \rule{0.8\linewidth}{0.6pt}\\[32pt]
+    \vspace{8pt}
+    \begin{tabular}{p{3cm}l}
+      \textbf{Sinh viên:} & \studentname\\
+      \textbf{MSSV:} & \studentid\\
+      \textbf{Giảng viên hướng dẫn:} & \instructor\\
+      \textbf{Ngày nộp:} & \dateofreport\\
+    \end{tabular}
+    \\
+    \vfill
+    {\small Bản PDF biên dịch bằng XeLaTeX (Overleaf).}
+  \end{center}
+\end{titlepage}
+
+\pagenumbering{roman}
+\chapter*{Lời cảm ơn}
+Xin chân thành cảm ơn thầy/cô và các bạn đã hỗ trợ trong quá trình thực hiện dự án OSPlayground.
+
+\chapter*{Tóm tắt}
+OSPlayground là dự án mô phỏng các khái niệm cốt lõi của hệ điều hành dưới dạng “mini‑worlds”: lập lịch CPU (FCFS, SJF, SRTF, RR, Priority), quản lý bộ nhớ (paging/segmentation, thay trang FIFO/LRU/OPT), và IPC/tín hiệu. Sản phẩm cung cấp giao diện CLI, Shell với pipeline, Dashboard TUI và GUI SDL2/Dear ImGui có minh hoạ Gantt chart và lưới khung trang. Báo cáo trình bày thiết kế, cài đặt, phương pháp đánh giá, và hướng phát triển.
+
+{\hypersetup{linkcolor=black}
+\tableofcontents
+\listoffigures
+\listoftables}
+
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Giới thiệu}
+\section{Động cơ và mục tiêu}
+Mục tiêu dự án là xây dựng một \textit{playground} nơi sinh viên có thể tương tác và trực quan hoá các khái niệm OS. Dự án hướng đến:
+\begin{itemize}[nosep]
+  \item Hiểu trực quan thuật toán lập lịch CPU qua Gantt chart và số liệu AWT/ATT.
+  \item Quan sát chính sách thay trang qua lưới khung trang và tỷ lệ faults.
+  \item Thực hành IPC/tín hiệu và shell pipelines dạng mô phỏng.
+  \item Tổng hợp thành “System Stability Score” để đánh giá toàn hệ thống.
+\end{itemize}
+
+\section{Đóng góp chính}
+\begin{itemize}[nosep]
+  \item Bộ thuật toán CPU: FCFS, SJF, SRTF, RR, Priority (NP/P), có Gantt ASCII và GUI.
+  \item Bộ nhớ: Paging/Segmentation; thay trang FIFO/LRU/OPT với bảng trạng thái từng bước.
+  \item IPC/Signal: mô phỏng Pipe và các tín hiệu INT/USR1/KILL.
+  \item Shell mini hỗ trợ pipeline và lệnh \verb|cpu|, \verb|mem|, \verb|ps|, \verb|kill|, \verb|grep|, \verb|wc|.
+  \item GUI SDL2/ImGui: vẽ Gantt chart CPU, lưới khung trang Memory; loader Scenario JSON.
+\end{itemize}
+
+\chapter{Cơ sở lý thuyết}
+\section{Khái niệm cốt lõi}
+\textbf{Tiến trình (process)}, \textbf{luồng (thread)}, và \textbf{bối cảnh (context)}. CPU thực thi một luồng tại một thời điểm (mô hình một lõi trong dự án). Chuyển ngữ cảnh (context switch) làm phát sinh thời gian chờ.
+
+\textbf{Chỉ số lập lịch} (đo trên từng tiến trình \texttt{i}): \(WT_i\) (waiting), \(TT_i\) (turnaround). Trung bình: \(\mathrm{AWT}=\frac{1}{n}\sum WT_i\), \(\mathrm{ATT}=\frac{1}{n}\sum TT_i\).
+
+\textbf{Bộ nhớ ảo}: \textit{paging} (trang/khung) và \textit{segmentation} (đoạn). Page fault xảy ra khi trang chưa ở RAM; chính sách thay trang quyết định nạn nhân.
+
+\textbf{IPC và tín hiệu}: tín hiệu là thông điệp bất đồng bộ (SIGINT, SIGKILL, ...); pipe là đệm FIFO truyền dữ liệu.
+
+\section{Thuật toán lập lịch trong dự án}
+\begin{itemize}
+  \item FCFS: trước đến trước phục vụ, dễ gây \textit{convoy effect}.
+  \item SJF (không tiền nhiệm): chọn burst ngắn nhất trong hàng đợi.
+  \item SRTF (tiền nhiệm): mỗi tick chọn thời gian còn lại nhỏ nhất, có thể ngắt.
+  \item Round Robin: công bằng thời gian với quantum q.
+  \item Priority (NP/P): ưu tiên nhỏ hơn là cao hơn; bản tiền nhiệm có thể ngắt.
+\end{itemize}
+
+\section{Chính sách thay trang}
+FIFO (đơn giản), LRU (xấp xỉ tính cục bộ), OPT (tối ưu nhìn tương lai).
+
+\chapter{Yêu cầu và phạm vi}
+\section{Yêu cầu chức năng}
+\begin{itemize}
+  \item Mô phỏng lập lịch CPU: FCFS, SJF, SRTF, RR, Priority (NP/P); vẽ Gantt; tính AWT/ATT.
+  \item Mô phỏng bộ nhớ: dịch địa chỉ logic; thay trang FIFO/LRU/OPT; hiển thị lưới khung trang.
+  \item IPC/Signal: pipe, gửi/nhận tín hiệu; thay đổi trạng thái tiến trình mô phỏng.
+  \item Shell mini: lệnh \verb|ps/kill/sig/cpu/mem/grep/wc| và pipeline \verb+|+.
+  \item GUI SDL2/ImGui: panel CPU, Memory, IPC, Scenarios, Score.
+  \item Điểm tổng hợp và ghi log kết quả.
+\end{itemize}
+
+\section{Yêu cầu phi chức năng}
+\begin{itemize}
+  \item Dễ build (CMake, C++17); GUI là tuỳ chọn.
+  \item Tính mô-đun: mỗi khối nằm trong \texttt{sim/*} hoặc \texttt{ui/*}.
+  \item Khả năng tái lập: sử dụng kịch bản JSON; log có timestamp.
+\end{itemize}
+
+\section{Phạm vi và giới hạn}
+Mô phỏng user-space, không phải kernel thật: không có bootloader, không MMU/driver thực; các thuật toán chạy trên dữ liệu mô phỏng.
+
+\chapter{Kiến trúc hệ thống}
+\section{Tổng quan các mô‑đun}
+\begin{figure}[H]
+  \centering
+  \boxedfigure{%
+  \begin{tikzpicture}[>=Stealth, node distance=8mm]
+    \tikzstyle{mod}=[draw,rounded corners,align=center,minimum width=3.4cm,minimum height=1.1cm,fill=blue!6]
+    \node[mod] (engine) {Engine\newline CLI/TUI Menu};
+    \node[mod, right=18mm of engine] (gui) {GUI SDL2/ImGui};
+    \node[mod, below=10mm of engine] (cpu) {CPU\newline Schedulers};
+    \node[mod, right=10mm of cpu] (mem) {Memory\newline Paging/Replacement};
+    \node[mod, right=10mm of mem] (ipc) {IPC\newline Pipe/Signal};
+    \node[mod, below=12mm of mem] (shell) {Shell\newline Pipelines};
+    \node[mod, below=10mm of shell] (core) {core::system\newline (CPU/MEM/IPC Stats)};
+    \draw[->] (engine) -- (cpu);
+    \draw[->] (engine) -- (mem);
+    \draw[->] (engine) -- (ipc);
+    \draw[->] (engine) -- (shell);
+    \draw[->] (gui) -- (cpu);
+    \draw[->] (gui) -- (mem);
+    \draw[->] (gui) -- (ipc);
+    \draw[->] (cpu) -- (core);
+    \draw[->] (mem) -- (core);
+    \draw[->] (ipc) -- (core);
+    \draw[<->] (shell) -- (core);
+  \end{tikzpicture}}
+  \caption{Sơ đồ mô‑đun và luồng dữ liệu chính}
+  \label{fig:arch}
+\end{figure}
+
+\section{Điểm số hệ thống}
+Điểm CPU ưu tiên AWT+ATT thấp, điểm Memory ưu tiên \textit{fault rate} thấp, điểm IPC phạt theo số lần \verb|KILL|. Tổng điểm \texttt{Score} lấy trung bình có trọng số.
+\begin{align*}
+ \text{CPU} &= 100 \cdot \frac{B}{B + (\text{AWT}+\text{ATT})},\; B=20,\\
+ \text{MEM} &= 100\cdot (1-\tfrac{\text{faults}}{\text{steps}}),\qquad
+ \text{IPC} = \max(0, 100 - 15\cdot \text{kills}),\\
+ \text{TOTAL} &= 0.4\,\text{CPU}+0.4\,\text{MEM}+0.2\,\text{IPC}.
+\end{align*}
+
+\chapter{Thiết kế chi tiết – CPU Scheduling}
+\section{Mô hình dữ liệu}
+\texttt{Process\{pid, arrival, burst, priority\}}; \texttt{Result\{awt, att\}}. Gantt là danh sách slot \texttt{(pid,start,finish)}.
+
+\section{FCFS}
+\paragraph{Ý tưởng} Sắp theo \texttt{arrival}, khi CPU rỗi thì nhảy tới thời điểm đến tiếp theo. \textbf{Không tiền nhiệm}.
+\paragraph{Giả mã}
+\begin{lstlisting}[language=C++]
+sort(procs by arrival, pid)
+time = 0
+for p in procs:
+  if time < p.arrival: time = p.arrival
+  start = time; finish = time + p.burst
+  waiting = start - p.arrival; turn = finish - p.arrival
+  time = finish; push_gantt(pid,start,finish)
+\end{lstlisting}
+\paragraph{Độ phức tạp} \(O(n\log n)\) do sắp xếp. Phù hợp batch, không công bằng với tiến trình ngắn.
+
+\section{SJF (non‑preemptive)}
+\paragraph{Ý tưởng} Tại mỗi thời điểm chọn job có \textit{burst} ngắn nhất trong số \(arrival \le time\).
+\paragraph{Giả mã}
+\begin{lstlisting}[language=C++]
+time = 0; used[n]=0; done=0
+while done < n:
+  pick i with used[i]==0, arrival[i]<=time and minimal burst
+  if not found: time++
+  else run i to completion; update metrics; push_gantt; used[i]=1; done++
+\end{lstlisting}
+\paragraph{Ghi chú} Có thể gây đói cho job dài nếu luôn có job ngắn mới tới.
+
+\section{SRTF (preemptive SJF)}
+\paragraph{Ý tưởng} Mỗi tick chọn \textit{remaining time} nhỏ nhất; nếu job mới đến có \textit{remaining} nhỏ hơn thì ngắt.
+\paragraph{Giả mã} Như code trong \texttt{sim/cpu/scheduler.cpp}, dùng \texttt{rt[i]} và hàm \texttt{pick(time)}.
+\paragraph{Tính chất} Tối ưu hoá ATT với giả định biết trước burst; chi phí ngắt cao nếu quá chi tiết.
+
+\section{Round Robin}
+\paragraph{Ý tưởng} Hàng đợi tròn; mỗi lần chạy tối đa q đơn vị thời gian; nếu chưa xong thì xếp cuối hàng.
+\paragraph{Giả mã}
+\begin{lstlisting}[language=C++]
+queue Q; enqueue arrivals at current time
+while not all done:
+  if Q.empty(): time = next arrival; enqueue arrivals; continue
+  i = Q.pop(); ts=time; slice=min(q, rt[i]); time+=slice; rt[i]-=slice
+  push_gantt(pid,ts,time); enqueue arrivals(time)
+  if rt[i]==0: finalize else Q.push(i)
+\end{lstlisting}
+\paragraph{Ảnh hưởng q} q nhỏ → đáp ứng tốt nhưng overhead cao; q lớn → tiệm cận FCFS.
+
+\section{Priority (NP/P)}
+\paragraph{Ý tưởng} Chọn priority nhỏ nhất. Bản tiền nhiệm cho phép ngắt khi job ưu tiên cao đến.
+\paragraph{Tránh đói} \textit{aging}: tăng dần ưu tiên khi chờ lâu (chưa triển khai trong mô phỏng, có thể mở rộng).
+Mỗi tiến trình \texttt{Process}\,(pid, arrival, burst, priority) tạo ra các mốc \textit{start/finish/wait/turnaround}. Các thuật toán được cài đặt trong \texttt{sim/cpu/scheduler.cpp}.
+\subsection*{FCFS} Sắp theo \texttt{arrival} rồi thực thi tuần tự; nếu rỗi CPU nhảy tới arrival kế tiếp.
+\subsection*{SJF / SRTF} Chọn burst nhỏ nhất (không tiền nhiệm) hoặc thời gian còn lại nhỏ nhất (tiền nhiệm) tại mỗi thời điểm; SRTF có thể ngắt.
+\subsection*{RR} Hàng đợi tròn với quantum \textit{q}, mỗi lần cấp CPU tối đa \texttt{min(q, remaining)}.
+\subsection*{Priority} Nhỏ hơn là ưu tiên cao; bản tiền nhiệm có thể cắt ngang.
+
+\begin{figure}[H]
+  \centering
+  \boxedfigure{%
+  \begin{tikzpicture}
+    \draw[->] (0,0) -- (10,0) node[right]{time};
+    % Example bars P1,P2,P3
+    \draw[fill=blue!40] (0,0.3) rectangle (2.5,1.2) node[midway,white]{P1};
+    \draw[fill=green!60] (2.5,0.3) rectangle (4,1.2) node[midway,white]{P2};
+    \draw[fill=orange!80] (4,0.3) rectangle (6,1.2) node[midway,white]{P3};
+    \draw[fill=blue!40] (6,0.3) rectangle (8.5,1.2) node[midway,white]{P1};
+    \foreach \x/\t in {0/0,2.5/2,4/3,6/4,8.5/6,10/8}{\draw (\x,0) -- +(0,-0.15) node[below]{\t};}
+  \end{tikzpicture}}
+  \caption{Minh hoạ Gantt chart (ví dụ RR)}
+\end{figure}
+
+\chapter{Thiết kế chi tiết – Bộ nhớ}
+\section{Dịch địa chỉ}
+\paragraph{Paging} \(phys = frame \times pageSize + offset\) nếu \(0\le page < |pageTable|\) và \(0\le offset < pageSize\).
+\paragraph{Segmentation} \(phys = base[s] + d\) nếu \(0\le s < |segs|\) và \(0\le d < limit_s\).
+\section{Thay trang}
+\paragraph{FIFO} Hàng đợi khung theo thứ tự nạp.
+\paragraph{LRU} Mảng \texttt{last\_used} lưu lần dùng gần nhất, chọn min.
+\paragraph{OPT} Tính \texttt{next\_use} trong tương lai; chọn xa nhất.
+\paragraph{Độ phức tạp} Mỗi bước \(O(F)\) với F là số frame; OPT tốn hơn do duyệt tương lai.
+\subsection*{Paging/Segmentation} Hàm \texttt{translate} kiểm tra biên và ánh xạ địa chỉ logic sang vật lý mô phỏng.
+\subsection*{Thay trang} FIFO, LRU, OPT xuất ra \texttt{frame\_states} (ma trận \texttt{steps\,\times\,frames}) để vẽ lưới.
+
+\begin{figure}[H]
+  \centering
+  \boxedfigure{%
+  \begin{tikzpicture}[scale=0.75]
+    \foreach \i in {0,...,3} {\node at (-0.6, -\i) {F\i};}
+    \foreach \j in {0,...,11} {\node[scale=0.8] at (\j*0.9, 0.8) {\j};}
+    \foreach \i in {0,...,3} {
+      \foreach \j in {0,...,11} {
+        \draw (\j*0.9, -\i) rectangle +(0.8,-0.8);
+      }
+    }
+  \end{tikzpicture}}
+  \caption{Khung trang theo thời gian (placeholder minh hoạ)}
+\end{figure}
+
+\chapter{Thiết kế chi tiết – IPC và Shell}
+\section{IPC}
+\paragraph{Pipe} Hàng đợi chuỗi FIFO; \texttt{write} đẩy, \texttt{read} lấy đầu.
+\paragraph{Signal} \texttt{handle(sig)}: in sự kiện; nếu \texttt{SIG\_KILL} thì \texttt{alive=false} và cập nhật thống kê.
+\section{Shell mini}
+\paragraph{Ngữ pháp (EBNF giản lược)}
+\begin{lstlisting}[caption={EBNF pipeline mô phỏng}]
+line      ::= step ("|" step)*
+step      ::= cmd { WS arg }
+cmd       ::= "echo"|"cat"|"ls"|"ps"|"kill"|"sig"|"cpu"|"mem"|"grep"|"wc"
+arg       ::= token
+token     ::= NONSPACE
+\end{lstlisting}
+\paragraph{Ngữ nghĩa} Mỗi \textit{step} biến đổi \texttt{vector<string>} đầu vào thành đầu ra; pipeline truyền tuần tự.
+IPC gồm hàng đợi Pipe và enum Signal; Shell tách lệnh theo \verb+|+, truyền \textit{vector\,lines} qua từng bước \texttt{cat|grep|wc}... Các lệnh \verb|cpu|, \verb|mem| cập nhật trực tiếp \texttt{core::system}.
+
+\chapter{Hệ thống điểm và đánh giá}
+\section{Kịch bản thực nghiệm}
+Sử dụng \texttt{assets/scenarios/demo\_cpu.json} chứa \texttt{processes}, \texttt{memory.frames}, \texttt{memory.ref}. GUI cung cấp panel \textit{Scenarios} để nạp.
+
+\section{Chỉ số và phương pháp}
+\begin{itemize}
+  \item CPU: \textbf{AWT}, \textbf{ATT} tính trung bình trên tập tiến trình.
+  \item Memory: \textbf{Fault rate} = faults/steps.
+  \item IPC: đếm \textbf{signals} và \textbf{kills}.
+  \item Tổng hợp: \textbf{System Stability Score} như \Cref{fig:arch}.
+\end{itemize}
+
+\section{Kết quả minh hoạ}
+% Placeholder for screenshots
+\begin{figure}[H]
+  \centering
+  \boxedfigure{\vspace{3cm}\\ \textit{(Chèn ảnh chụp GUI: CPU Gantt)}}
+  \caption{Ảnh chụp GUI – CPU panel}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \boxedfigure{\vspace{3cm}\\ \textit{(Chèn ảnh chụp GUI: Memory grid)}}
+  \caption{Ảnh chụp GUI – Memory panel}
+\end{figure}
+
+\chapter{Giao diện người dùng}
+\section{CLI/TUI}
+Menu điều hướng trong \texttt{Engine}. Dashboard TUI hiển thị trạng thái và điểm số tức thời.
+\section{GUI SDL2/ImGui}
+Panel CPU (chạy thuật toán, Gantt), Memory (lưới khung trang), IPC, Scenarios (nạp JSON), Score. Theme tối, bo góc; font hệ thống nếu có.
+
+\chapter{Hướng dẫn sử dụng}
+\section{Build và chạy}
+\subsection*{CLI nhanh}
+Windows: \verb|./scripts/build.ps1 -Run|. Linux/WSL/macOS: \verb|./scripts/build.sh|.
+
+\subsection*{GUI (tùy chọn)}
+Cài SDL2 dev và trỏ \verb|IMGUI_DIR| tới thư mục Dear ImGui. Cấu hình: \verb|cmake -S . -B build -DUSE_GFX_SDL_IMGUI=ON -DIMGUI_DIR=...|.
+
+\section{Flow demo}
+\begin{enumerate}[nosep]
+  \item Nạp Scenario → Memory: \textit{Load from Scenario} → chạy FIFO/LRU/OPT.
+  \item CPU: bật \textit{Use Scenario data} → chạy RR hoặc SRTF.
+  \item IPC: gửi INT/USR1/KILL để quan sát thay đổi điểm.
+  \item Score: đọc các điểm thành phần và tổng.
+\end{enumerate}
+
+\chapter{Kế hoạch kiểm thử}
+\section{Unit test}
+Test cho: tính AWT/ATT trên dataset nhỏ; số fault của FIFO/LRU/OPT; hành vi kill trong IPC.
+\section{Functional test}
+Thử các flow GUI/CLI chính; so khớp log với bảng kết quả.
+\section{Chấp nhận}
+Đi qua checklist yêu cầu mục tiêu; điểm tổng hợp hợp lý trên cùng dataset.
+
+\chapter{Kết quả định lượng và biểu đồ}
+\section{CPU – Bảng và biểu đồ}
+\pgfplotstableread[col sep=comma]{data/cpu_results.csv}\cpudata
+\pgfplotstabletypeset[%
+  columns/algo/.style={string type,column name=Thuật toán},
+  columns/AWT/.style={fixed,precision=4,column name=AWT},
+  columns/ATT/.style={fixed,precision=4,column name=ATT},
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule}
+]{\cpudata}
+
+\begin{figure}[H]
+  \centering
+  \boxedfigure{%
+  \begin{tikzpicture}
+    \begin{axis}[
+      ybar, ymin=0,
+      width=0.95\textwidth, height=6cm,
+      bar width=10pt,
+      symbolic x coords={FCFS,SJF,SRTF,RR_q4,PRIO_NP,PRIO_P},
+      xtick=data, xticklabel style={rotate=30,anchor=east},
+      legend style={at={(0.5,1.05)},anchor=south,legend columns=-1},
+      ylabel={Thời gian (đv)}
+    ]
+      \addplot table[x=algo,y=AWT]{\cpudata};
+      \addplot table[x=algo,y=ATT]{\cpudata};
+      \legend{AWT, ATT}
+    \end{axis}
+  \end{tikzpicture}}
+  \caption{So sánh AWT/ATT theo thuật toán (dataset mẫu)}
+\end{figure}
+
+\section{Memory – Bảng và biểu đồ}
+\pgfplotstableread[col sep=comma]{data/mem_results.csv}\memdata
+\pgfplotstabletypeset[%
+  columns/policy/.style={string type,column name=Chính sách},
+  columns/faults/.style={int column,column name=Faults},
+  columns/steps/.style={int column,column name=Steps},
+  columns/rate/.style={fixed,precision=4,column name=Fault rate},
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule}
+]{\memdata}
+
+\begin{figure}[H]
+  \centering
+  \boxedfigure{%
+  \begin{tikzpicture}
+    \begin{axis}[
+      ybar, ymin=0,
+      width=0.95\textwidth, height=6cm,
+      bar width=14pt,
+      symbolic x coords={FIFO,LRU,OPT}, xtick=data,
+      xticklabel style={rotate=0,anchor=center},
+      ylabel={Faults}
+    ]
+      \addplot table[x=policy,y=faults]{\memdata};
+    \end{axis}
+  \end{tikzpicture}}
+  \caption{Số lỗi trang theo chính sách (dataset mẫu)}
+\end{figure}
+
+\section{IPC – Bảng tóm tắt}
+\pgfplotstableread[col sep=comma]{data/ipc_results.csv}\ipcdata
+\pgfplotstabletypeset[%
+  columns/metric/.style={string type,column name=Chỉ số},
+  columns/value/.style={string type,column name=Giá trị},
+  every head row/.style={before row=\toprule,after row=\midrule},
+  every last row/.style={after row=\bottomrule}
+]{\ipcdata}
+
+\chapter{Kết luận và hướng phát triển}
+\section{Kết luận}
+Dự án đạt được mục tiêu mô phỏng các khối kiến thức OS một cách trực quan, có GUI và hệ điểm tổng hợp.
+
+\section{Hướng phát triển}
+\begin{itemize}
+  \item Bổ sung Gantt chuẩn cho SJF/Priority; thêm legend màu, zoom/scroll.
+  \item Xuất báo cáo tự động (CSV/PNG) từ GUI.
+  \item Mở rộng Shell (redirect, scripts) và thêm bài tập “nhiệm vụ”.
+  \item Xa hơn: dựng kernel tối thiểu chạy trên QEMU.
+\end{itemize}
+
+\appendix
+\chapter{Hướng dẫn nền tảng OS cho người mới bắt đầu}
+\section{CPU, tiến trình và luồng}
+\textbf{Tiến trình (process)} là một chương trình đang thực thi; \textbf{luồng (thread)} là đơn vị lập lịch nhỏ hơn trong tiến trình. Ở dự án này, mỗi tiến trình có ba thuộc tính tối thiểu: \texttt{arrival} (thời điểm đến), \texttt{burst} (thời lượng CPU cần), \texttt{priority}. CPU chỉ chạy một tiến trình tại một thời điểm (mô hình một lõi) và việc chuyển đổi giữa tiến trình tạo ra \textit{thời gian chờ}.
+
+\paragraph{Chỉ số căn bản}
+\begin{itemize}
+  \item \textbf{Waiting time} (WT): tổng thời gian tiến trình chờ trong hàng đợi, không chạy.
+  \item \textbf{Turnaround time} (TT): tổng thời gian từ lúc đến đến lúc hoàn tất: \(TT = finish - arrival\).
+  \item \textbf{Average WT/TT}: trung bình WT/TT cho toàn bộ tập tiến trình.
+\end{itemize}
+
+\section{Tại sao cần nhiều thuật toán lập lịch?}
+Không có thuật toán tối ưu tuyệt đối cho mọi kịch bản. FCFS đơn giản nhưng dễ gây \textit{convoy effect}; SJF/SRTF tối ưu TT nhưng có nguy cơ đói (starvation); RR công bằng hơn với tương tác; Priority phản ánh mức độ quan trọng nhưng cần kỹ thuật \textit{aging} để giảm đói.
+
+\section{Ví dụ tính tay (dataset nhỏ)}
+Giả sử ba tiến trình: \(P1=(0,10)\), \(P2=(0,5)\), \(P3=(0,8)\). Với RR \(q=4\), Gantt có thể như \Cref{fig:rr-hand}. Từ đó suy ra AWT/ATT bằng cách cộng thời gian chờ/hoàn tất của từng tiến trình và chia cho 3.
+
+\begin{figure}[H]
+  \centering
+  \boxedfigure{%
+  \begin{tikzpicture}
+    \draw[->] (0,0) -- (12,0) node[right]{time};
+    \draw[fill=blue!50] (0,0.3) rectangle (4,1.1) node[midway,white]{P1};
+    \draw[fill=green!60] (4,0.3) rectangle (8,1.1) node[midway,white]{P2/P3};
+    % placeholder scale; thay bằng ảnh GUI nếu cần
+    \foreach \x/\t in {0/0,4/4,8/8,12/12}{\draw (\x,0) -- +(0,-0.15) node[below]{\t};}
+  \end{tikzpicture}}
+  \caption{Minh hoạ Gantt RR (placeholder)}\label{fig:rr-hand}
+\end{figure}
+
+\section{Bộ nhớ: từ địa chỉ logic đến vật lý}
+\paragraph{Paging} chia không gian nhớ logic thành các trang (page) và vật lý thành khung (frame). Địa chỉ logic \((page, offset)\) ánh xạ sang vật lý \(frame\times pageSize + offset\) thông qua bảng trang (page table). Nếu không tìm thấy trang trong bộ nhớ, xảy ra \textbf{page fault} và chính sách thay trang quyết định nạn nhân.
+
+\paragraph{Segmentation} chia theo đoạn (module, stack, heap). Địa chỉ logic \((segment, offset)\) hợp lệ khi \(offset < limit\); địa chỉ vật lý là \(base + offset\).
+
+\paragraph{LRU/OPT/FIFO}:
+\begin{itemize}
+  \item \textbf{FIFO}: đơn giản, dễ thực thi nhưng có thể gây \textit{Belady's anomaly}.
+  \item \textbf{LRU}: xấp xỉ chương trình nguyên nhân cục bộ (locality), thay trang dùng \textit{lâu nhất} trong quá khứ.
+  \item \textbf{OPT}: chuẩn tối ưu, thay trang có lần dùng \textit{xa nhất} trong tương lai (dùng để so sánh, không thể triển khai thực tế).
+\end{itemize}
+
+\section{IPC và Shell}
+\textbf{Pipe} truyền chuỗi giữa các tiến trình; \textbf{Signal} là thông điệp bất đồng bộ (SIGINT, SIGKILL, ...). Shell pipeline \verb|A | B| lấy đầu ra của A làm đầu vào của B; trong dự án, pipeline được mô phỏng bằng danh sách chuỗi nên người học dễ quan sát.
+
+\chapter{Thiết kế chi tiết và API}
+\section{Cấu trúc thư mục}
+\begin{longtable}{@{}ll@{}}
+  \toprule
+  \textbf{Đường dẫn} & \textbf{Mô tả}\\\midrule
+  engine/ & Vòng lặp menu CLI/TUI, điều hướng demo\\
+  sim/cpu/ & Bộ lập lịch, Gantt ASCII, demo CLI\\
+  sim/mem/ & Dịch địa chỉ và thay trang\\
+  sim/ipc/ & Pipe và Signal mô phỏng\\
+  sim/shell/ & Shell mini, pipelines và lệnh mô phỏng\\
+  sim/core/ & Trạng thái hệ thống, công thức chấm điểm\\
+  ui/gfx/ & GUI SDL2/ImGui (tùy chọn)\\
+  utils/ & Ghi log, tiện ích file\\
+  docs/ & Tài liệu, báo cáo\\
+  assets/scenarios/ & Kịch bản JSON mẫu\\\bottomrule
+\end{longtable}
+
+\section{Giao diện lập lịch (Scheduler)}
+\begin{lstlisting}[language=C++,caption={struct Process và giao diện Scheduler}]
+struct Process { int pid, arrival, burst, priority; /* ... */ };
+struct Result { double awt, att; };
+class Scheduler {
+  Result runFCFS(vector<Process>);
+  Result runSJF(vector<Process>);
+  Result runSRTF(vector<Process>);
+  Result runRR(vector<Process>, int q);
+  Result runPriorityNP(vector<Process>);
+  Result runPriorityP(vector<Process>);
+};
+\end{lstlisting}
+
+\section{Chính sách thay trang}
+\begin{lstlisting}[language=C++,caption={Kết quả thay trang}]
+struct ReplResult{
+  int frames, faults;                // Thống kê tổng
+  vector<vector<int>> frame_states;  // trạng thái sau mỗi step
+};
+\end{lstlisting}
+
+\chapter{Phương pháp thực nghiệm và tái lập}
+\section{Thiết lập}
+Build bằng CMake, C++17. GUI cần SDL2 và Dear ImGui (không yêu cầu OpenGL). Tất cả lệnh đều được mô tả ở \texttt{scripts/} và trong phần Hướng dẫn sử dụng.
+
+\section{Bộ dữ liệu}
+Kịch bản \texttt{assets/scenarios/demo\_cpu.json} định nghĩa \texttt{processes}, \texttt{frames}, \texttt{ref}. Người dùng có thể chỉnh sửa hoặc tạo thêm JSON tương tự.
+
+\section{Thực nghiệm}
+\begin{enumerate}
+  \item Chạy các thuật toán CPU trên cùng dataset; ghi AWT/ATT.
+  \item Chạy FIFO/LRU/OPT với cùng \texttt{frames, ref}; ghi \texttt{faults} và lưới.
+  \item Gửi \texttt{SIGINT/USR1/KILL} để quan sát IPC và điểm số.
+  \item Đọc “System report” và ghi tổng điểm.
+\end{enumerate}
+
+\section{Bảng kết quả (placeholder)}
+\begin{longtable}{@{}lcc@{}}
+\toprule Thuật toán & AWT & ATT \\\midrule
+FCFS & \_\_ & \_\_ \\
+SJF  & \_\_ & \_\_ \\
+SRTF & \_\_ & \_\_ \\
+RR(q=4) & \_\_ & \_\_ \\
+Priority NP & \_\_ & \_\_ \\
+Priority P & \_\_ & \_\_ \\\bottomrule
+\end{longtable}
+
+\begin{longtable}{@{}lcc@{}}
+\toprule Chính sách & Faults & Fault rate \\\midrule
+FIFO & \_\_ & \_\_ \\
+LRU  & \_\_ & \_\_ \\
+OPT  & \_\_ & \_\_ \\\bottomrule
+\end{longtable}
+
+\chapter{Khắc phục sự cố}
+\begin{itemize}
+  \item \textbf{CMake báo không thấy imgui.cpp}: sai \texttt{IMGUI\_DIR}. Hãy trỏ tới thư mục gốc Dear ImGui (có \texttt{imgui.cpp}, thư mục \texttt{backends/}).
+  \item \textbf{Thiếu SDL.h}: cài gói phát triển SDL2 (\texttt{apt install libsdl2-dev} hoặc vcpkg trên Windows) và cấu hình lại.
+  \item \textbf{GUI không mở trên WSL}: bật WSLg (Windows 11) hoặc cài X server; thiết lập biến \texttt{DISPLAY}.
+\end{itemize}
+
+\chapter{Phụ lục A – Lệnh Shell}
+\begin{longtable}{@{}ll@{}}
+  \toprule
+  Lệnh & Mô tả\\ \midrule
+  \verb|ps| & Liệt kê tiến trình mô phỏng\\
+  \verb|kill <pid>| & Gửi SIGKILL\\
+  \verb|sig <pid> <INT|USR1|KILL>| & Gửi tín hiệu\\
+  \verb|cpu <algo> [q]| & Chạy lập lịch (fcfs|sjf|srtf|rr q|prio\_np|prio\_p)\\
+  \verb|mem <policy> <F> [ref...]| & Mô phỏng thay trang (fifo|lru|opt|all)\\
+  \verb|cat/grep/wc/ls/echo| & Pipeline văn bản\\
+  \bottomrule
+\end{longtable}
+
+\chapter{Phụ lục B – Cấu trúc Scenario JSON}
+\begin{lstlisting}[language=json,caption={Schema tổng quát (ví dụ)}]
+{
+  "processes": [
+    {"pid": 1, "arrival": 0, "burst": 10, "priority": 2},
+    {"pid": 2, "arrival": 0, "burst": 5,  "priority": 1}
+  ],
+  "memory": {
+    "frames": 3,
+    "ref": [7,0,1,2,0,3,0,4,2,3,0,3]
+  }
+}
+\end{lstlisting}
+
+\chapter*{Tài liệu tham khảo}
+\addcontentsline{toc}{chapter}{Tài liệu tham khảo}
+\begin{thebibliography}{9}
+\bibitem{ostep} Remzi H. Arpaci-Dusseau, Andrea C. Arpaci-Dusseau, \emph{Operating Systems: Three Easy Pieces}, 2018.
+\bibitem{tanenbaum} Andrew S. Tanenbaum, Herbert Bos, \emph{Modern Operating Systems}, 4th Ed., 2015.
+\bibitem{imgui} Omar Cornut, \emph{Dear ImGui}. \url{https://github.com/ocornut/imgui}
+\bibitem{sdl2} SDL2 Library. \url{https://www.libsdl.org/}
+\end{thebibliography}
+
+\end{document}

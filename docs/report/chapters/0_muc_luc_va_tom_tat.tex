@@ -1,0 +1,139 @@
+% ============================================================================
+% CHƯƠNG 0: MỤC LỤC VÀ TÓM TẮT
+% ============================================================================
+
+% ============================================================================
+% Mục lục
+% ============================================================================
+{\hypersetup{linkcolor=black}
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\tableofcontents
+\clearpage
+
+\listoffigures
+\clearpage
+
+\listoftables
+\clearpage
+}
+
+% ============================================================================
+% TÓM TẮT (Abstract)
+% ============================================================================
+\chapter*{Tóm tắt}
+\addcontentsline{toc}{chapter}{Tóm tắt}
+
+\textbf{OSPlayground} là dự án mô phỏng toàn diện các khái niệm cốt lõi của hệ điều hành (Operating System), 
+được xây dựng dưới dạng các "mini-worlds" tương tác. Dự án cung cấp công cụ học tập trực quan hoá 
+các thuật toán phức tạp của OS thông qua các giao diện người dùng đa dạng.
+
+\subsection*{Phạm vi chính}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Lập lịch CPU (CPU Scheduling):} 
+  Mô phỏng 6 thuật toán chính: FCFS (First Come First Serve), SJF (Shortest Job First), 
+  SRTF (Shortest Remaining Time First), RR (Round Robin), Priority Non-preemptive, Priority Preemptive. 
+  Các thuật toán được trực quan hoá bằng biểu đồ Gantt và tính toán các chỉ số hiệu năng (AWT, ATT).
+
+  \item \textbf{Quản lý bộ nhớ (Memory Management):} 
+  Mô phỏng các kỹ thuật quản lý bộ nhớ ảo bao gồm Paging và Segmentation. 
+  Triển khai ba chính sách thay trang (Page Replacement): FIFO (First In First Out), 
+  LRU (Least Recently Used), và OPT (Optimal). Hiển thị trạng thái khung trang theo thời gian thực.
+
+  \item \textbf{Giao tiếp liên tiến trình (IPC - Inter-Process Communication):} 
+  Mô phỏng Pipe (ống dẫn), Signal (tín hiệu) bao gồm SIGINT, SIGUSR1, SIGKILL. 
+  Quan sát tác động của các tín hiệu lên trạng thái và điểm số hệ thống.
+
+  \item \textbf{Shell mini:} 
+  Triển khai shell dòng lệnh với hỗ trợ pipeline, cho phép kết hợp các lệnh 
+  (\texttt{ps}, \texttt{kill}, \texttt{cpu}, \texttt{mem}, \texttt{grep}, \texttt{wc}) 
+  để tương tác với mô phỏng hệ thống.
+
+  \item \textbf{Giao diện người dùng:} 
+  Ba lớp giao diện:
+  \begin{enumerate}[nosep]
+    \item CLI (Command Line Interface) cơ bản
+    \item TUI (Text User Interface) - Dashboard tương tác
+    \item GUI (Graphical User Interface) sử dụng SDL2 và Dear ImGui với biểu đồ Gantt, lưới khung trang
+  \end{enumerate}
+
+  \item \textbf{Hệ thống điểm tổng hợp (System Stability Score):} 
+  Đánh giá toàn bộ hiệu năng hệ thống thông qua công thức tích hợp, kết hợp 
+  các chỉ số từ CPU, Memory, và IPC với trọng số thích hợp.
+\end{itemize}
+
+\subsection*{Công nghệ sử dụng}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Ngôn ngữ:} C++17 (tiêu chuẩn C++ năm 2017)
+  \item \textbf{Build system:} CMake 3.20+
+  \item \textbf{Giao diện:} SDL2, Dear ImGui (Dear ImGui v1.89+)
+  \item \textbf{Logging:} Hệ thống log tùy chỉnh với timestamp
+  \item \textbf{Cấu hình:} JSON (libcurl/nlohmann json)
+  \item \textbf{Platform:} Windows (MSVC), Linux/WSL (GCC/Clang), macOS (Clang)
+\end{itemize}
+
+\subsection*{Mục tiêu học tập}
+
+Dự án hướng đến việc giúp sinh viên, nhà giáo dục, và những người yêu thích hệ điều hành:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Hiểu sâu các thuật toán lập lịch CPU qua trực quan hoá Gantt chart
+  \item Nắm bắt được ảnh hưởng của các chỉ số (AWT, ATT) đối với hiệu năng
+  \item Quan sát các chính sách thay trang và tương tác giữa bộ nhớ ảo và vật lý
+  \item Thực hành giao tiếp liên tiến trình thông qua pipeline và signal
+  \item Tổng hợp kiến thức thông qua hệ điểm toàn diện
+
+\end{enumerate}
+
+\subsection*{Kết quả chính}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Mô-đun CPU với 6 thuật toán + Gantt chart (ASCII và GUI)
+  \item Mô-đun Memory với 3 chính sách thay trang + lưới khung trang tương tác
+  \item Mô-đun IPC với Pipe và 3 loại Signal
+  \item Shell mini hỗ trợ 8+ lệnh và pipeline
+  \item GUI đầy đủ với 5 panel chính
+  \item Hệ thống điểm tổng hợp và ghi log chi tiết
+  \item Hỗ trợ kịch bản JSON để tái lập các thử nghiệm
+\end{itemize}
+
+\subsection*{Cấu trúc báo cáo}
+
+\begin{description}[leftmargin=2cm,style=nextline]
+  \item[\textbf{Chương 1: Giới thiệu}] Động cơ, mục tiêu, đóng góp chính của dự án
+  \item[\textbf{Chương 2: Cơ sở lý thuyết}] Kiến thức OS nền tảng, các khái niệm cốt lõi
+  \item[\textbf{Chương 3: Yêu cầu và phạm vi}] Thông số kỹ thuật, giới hạn, ràng buộc
+  \item[\textbf{Chương 4: Kiến trúc hệ thống}] Thiết kế tổng thể, mô-đun, flow dữ liệu
+  \item[\textbf{Chương 5: Chi tiết CPU Scheduling}] Thiết kế, thuật toán, cài đặt
+  \item[\textbf{Chương 6: Chi tiết Memory Management}] Dịch địa chỉ, thay trang, trực quan
+  \item[\textbf{Chương 7: Chi tiết IPC và Shell}] Pipe, Signal, lệnh shell, pipeline
+  \item[\textbf{Chương 8: Hệ thống điểm và đánh giá}] Công thức, chỉ số, phương pháp
+  \item[\textbf{Chương 9: Giao diện người dùng}] CLI, TUI, GUI - thiết kế và tính năng
+  \item[\textbf{Chương 10: Hướng dẫn sử dụng}] Build, chạy, flow demo, thao tác
+  \item[\textbf{Chương 11: Kế hoạch kiểm thử}] Unit test, functional test, chấp nhận
+  \item[\textbf{Chương 12: Kết quả thực nghiệm}] Dữ liệu, biểu đồ, so sánh hiệu năng
+  \item[\textbf{Chương 13: Kết luận}] Tổng kết, hướng phát triển, bài học
+\end{description}
+
+\clearpage
+
+% ============================================================================
+% LỜI CẢM ƠN
+% ============================================================================
+\chapter*{Lời cảm ơn}
+\addcontentsline{toc}{chapter}{Lời cảm ơn}
+
+Xin chân thành cảm ơn:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Thầy/cô giảng viên hướng dẫn đã tạo điều kiện, hướng dẫn tận tình trong suốt quá trình thực hiện dự án
+  \item Các bạn cùng lớp, cùng nhóm đã hỗ trợ, góp ý và cung cấp feedback quý báu
+  \item Đội ngũ Open Source tại Dear ImGui, SDL2 và cộng đồng C++ vì những thư viện tuyệt vời
+  \item Gia đình, bạn bè đã khuyến khích, động viên trong quá trình học tập và phát triển
+\end{itemize}
+
+Hy vọng báo cáo này sẽ có ích cho những ai quan tâm đến Hệ điều hành.
+
+\clearpage

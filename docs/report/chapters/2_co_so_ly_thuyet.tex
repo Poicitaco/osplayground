@@ -1,0 +1,392 @@
+% ============================================================================
+% CHƯƠNG 2: CƠ SỞ LÝ THUYẾT
+% ============================================================================
+
+\chapter{Cơ sở lý thuyết}
+\label{ch:theory}
+
+\section{Khái niệm cơ bản về hệ điều hành}
+
+\subsection{Tiến trình (Process), luồng (Thread) và bối cảnh (Context)}
+
+\textbf{Tiến trình (Process)} là một chương trình đang thực thi. Mỗi tiến trình có:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Bộ nhớ}: Bao gồm code, data, heap, stack
+  \item \textbf{Trạng thái CPU}: Giá trị các thanh ghi
+  \item \textbf{Thông tin bối cảnh}: PID (Process ID), cha mẹ, ưu tiên, ...
+  \item \textbf{Tài nguyên}: Tập tin mở, socket, bộ nhớ chia sẻ, ...
+\end{itemize}
+
+\textbf{Luồng (Thread)} là đơn vị lập lịch nhỏ hơn, nằm bên trong tiến trình. 
+Các luồng cùng tiến trình chia sẻ bộ nhớ nhưng có stack và thanh ghi riêng.
+
+\textbf{Bối cảnh (Context)} là tập hợp thông tin CPU cần để tiếp tục thực thi một 
+tiến trình: thanh ghi, con trỏ chương trình (PC), con trỏ ngăn xếp (SP), ...
+
+\textbf{Chuyển ngữ cảnh (Context Switch)} xảy ra khi CPU chuyển từ tiến trình này sang 
+tiến trình khác. Việc chuyển đổi này có chi phí (overhead) vì phải lưu/khôi phục trạng thái.
+
+\subsection{Trạng thái tiến trình}
+
+Trong mô phỏng, một tiến trình có thể ở các trạng thái:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{New}: Tiến trình vừa được tạo, chưa sẵn sàng
+  \item \textbf{Ready}: Tiến trình sẵn sàng chạy, chờ CPU
+  \item \textbf{Running}: Tiến trình đang chạy trên CPU
+  \item \textbf{Blocked}: Tiến trình chờ I/O hoặc tài nguyên
+  \item \textbf{Terminated}: Tiến trình kết thúc
+\end{itemize}
+
+Trong dự án này, vì không mô phỏng I/O nên chủ yếu quan tâm đến Ready, Running, Terminated.
+
+\section{Lập lịch CPU (CPU Scheduling)}
+
+\subsection{Mục tiêu của lập lịch CPU}
+
+Lập lịch CPU (CPU Scheduling) quyết định tiến trình nào được chạy trên CPU tại thời điểm nào. 
+Mục tiêu chính:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Độ sử dụng CPU cao}: Giữ CPU luôn bận rộn, giảm thời gian rỗi
+  \item \textbf{Throughput cao}: Hoàn thành nhiều tiến trình trong một đơn vị thời gian
+  \item \textbf{Turnaround time thấp}: Giảm thời gian tổng để hoàn thành một tiến trình
+  \item \textbf{Waiting time thấp}: Giảm thời gian chờ trong hàng đợi
+  \item \textbf{Response time thấp}: Phản ứng nhanh đối với yêu cầu tương tác
+  \item \textbf{Công bằng}: Mỗi tiến trình được cơ hội công bằng trên CPU
+\end{itemize}
+
+Các mục tiêu này thường xung đột với nhau, vì vậy mỗi thuật toán lập lịch là một 
+thỏa hiệp giữa chúng.
+
+\subsection{Các chỉ số đo lường}
+
+Đối với tiến trình $i$, đặt:
+\begin{itemize}[leftmargin=1.5cm]
+  \item $A_i$ = arrival time (thời điểm đến)
+  \item $B_i$ = burst time (thời gian CPU cần)
+  \item $S_i$ = start time (lúc bắt đầu chạy)
+  \item $F_i$ = finish time (lúc hoàn thành)
+\end{itemize}
+
+Khi đó:
+\begin{align}
+WT_i &= S_i - A_i & \text{(Waiting Time)} \\
+TT_i &= F_i - A_i = WT_i + B_i & \text{(Turnaround Time)} \\
+RT_i &= TT_i - B_i & \text{(Response Time)}
+\end{align}
+
+Các chỉ số trung bình:
+\begin{align}
+AWT &= \frac{1}{n}\sum_{i=1}^{n} WT_i & \text{(Average Waiting Time)} \\
+ATT &= \frac{1}{n}\sum_{i=1}^{n} TT_i & \text{(Average Turnaround Time)}
+\end{align}
+
+\subsection{Tiền nhiệm vs. Không tiền nhiệm}
+
+\textbf{Non-preemptive (Không tiền nhiệm)}: Khi một tiến trình bắt đầu chạy, 
+nó sẽ chạy liên tục cho đến khi hoàn thành hoặc bị chặn (I/O). CPU không thể 
+lấy lại từ tiến trình đó cho đến khi nó tự động từ bỏ.
+
+\textbf{Preemptive (Tiền nhiệm)}: CPU có thể bị lấy lại từ tiến trình đang chạy 
+để cấp cho tiến trình khác, thường dựa trên prioritization.
+
+\section{Các thuật toán lập lịch}
+
+\subsection{1. FCFS - First Come First Serve}
+
+\textbf{Nguyên lý}: Tiến trình nào đến trước phục vụ trước. Không tiền nhiệm.
+
+\textbf{Giả mã}:
+\begin{lstlisting}[language=Python,caption={FCFS pseudocode}]
+sort processes by arrival time
+time = 0
+for each process p in sorted list:
+    if time < p.arrival:
+        time = p.arrival  # CPU idle, jump to next arrival
+    p.start_time = time
+    p.finish_time = time + p.burst
+    p.wait_time = p.start_time - p.arrival
+    time = p.finish_time
+\end{lstlisting}
+
+\textbf{Độ phức tạp}: $O(n \log n)$ do sắp xếp
+
+\textbf{Ưu/nhược điểm}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Ưu}: Đơn giản, dễ cài đặt, công bằng
+  \item \textbf{Nhược}: Gây \textit{Convoy Effect} - nếu tiến trình dài đến trước, 
+  tất cả tiến trình ngắn phía sau phải chờ lâu, làm AWT tệ
+\end{itemize}
+
+\subsection{2. SJF - Shortest Job First}
+
+\textbf{Nguyên lý}: Tại mỗi lần CPU rỗi, chọn tiến trình có burst time nhỏ nhất 
+trong số những tiến trình đã đến. Không tiền nhiệm.
+
+\textbf{Tính chất}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item SJF tối ưu hoá AWT theo lý thuyết (giảm nhất trong các non-preemptive algorithms)
+  \item Nhưng có khuyết điểm: có thể gây \textit{starvation} cho tiến trình dài nếu luôn có tiến trình ngắn đến
+  \item Yêu cầu biết trước burst time, điều không thực tế trong hệ thống thực
+\end{itemize}
+
+\subsection{3. SRTF - Shortest Remaining Time First}
+
+\textbf{Nguyên lý}: Phiên bản preemptive của SJF. Tại mỗi tick thời gian, 
+CPU chọn tiến trình có \textit{remaining time} (thời gian còn lại) nhỏ nhất. 
+Nếu tiến trình mới đến có remaining time nhỏ hơn tiến trình đang chạy, 
+thì ngắt tiến trình hiện tại và chạy tiến trình mới.
+
+\textbf{Tính chất}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Tối ưu hoá ATT trong tất cả các preemptive algorithms
+  \item Chi phí context switch cao nếu quá chi tiết
+  \item Cũng gây starvation cho tiến trình dài
+\end{itemize}
+
+\subsection{4. RR - Round Robin}
+
+\textbf{Nguyên lý}: CPU được chia thành các time slice (quantum) bằng nhau. 
+Mỗi tiến trình trong hàng đợi được cấp CPU tối đa một quantum. 
+Nếu không hoàn thành, tiến trình được đặt ở cuối hàng đợi.
+
+\textbf{Giả mã}:
+\begin{lstlisting}[language=Python,caption={RR pseudocode}]
+queue Q = empty
+time = 0
+enqueue all processes that arrive at time 0
+
+while Q is not empty:
+    if Q is empty:
+        time = next arrival time
+        enqueue all processes arriving at time
+        continue
+    
+    p = Q.dequeue()
+    slice = min(quantum, p.remaining_time)
+    time += slice
+    p.remaining_time -= slice
+    
+    enqueue all processes arriving at time
+    
+    if p.remaining_time > 0:
+        Q.enqueue(p)
+    else:
+        p.finish_time = time
+\end{lstlisting}
+
+\textbf{Ảnh hưởng của quantum}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Quantum nhỏ → Response time tốt, nhưng overhead context switch cao
+  \item Quantum lớn → Overhead thấp, nhưng giống FCFS hơn
+  \item Quantum = $\infty$ → Trở thành FCFS
+\end{itemize}
+
+\subsection{5. Priority Scheduling}
+
+\textbf{Nguyên lý}: Mỗi tiến trình có một mức ưu tiên (priority number). 
+CPU luôn chọn tiến trình có ưu tiên cao nhất (priority number nhỏ nhất theo quy ước).
+
+\textbf{Hai biến thể}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Non-preemptive}: Tiến trình chạy cho đến khi xong
+  \item \textbf{Preemptive}: Nếu tiến trình mới đến có ưu tiên cao hơn, ngắt tiến trình hiện tại
+\end{itemize}
+
+\textbf{Vấn đề Starvation}: Tiến trình ưu tiên thấp có thể chờ mãi mãi.
+
+\textbf{Giải pháp - Aging}: Tăng dần ưu tiên của tiến trình theo thời gian chờ. 
+Công thức ví dụ:
+\begin{equation}
+\text{priority}(t) = \text{original\_priority} - \lfloor t / \text{aging\_factor} \rfloor
+\end{equation}
+
+\section{Quản lý bộ nhớ ảo}
+
+\subsection{Paging}
+
+\textbf{Khái niệm}: Chia không gian nhớ logic (process memory space) thành các đơn vị 
+cố định gọi là \textbf{trang (pages)}, và chia bộ nhớ vật lý thành các đơn vị 
+tương ứng gọi là \textbf{khung (frames)}.
+
+\textbf{Dịch địa chỉ}:
+Một địa chỉ logic $L$ (logical address) bao gồm:
+\begin{equation}
+L = \text{page\_number} \times \text{pageSize} + \text{offset}
+\end{equation}
+
+Bảng trang (page table) ánh xạ page number sang frame number:
+\begin{equation}
+\text{physical\_address} = \text{pageTable}[\text{page\_number}] \times \text{pageSize} + \text{offset}
+\end{equation}
+
+\textbf{Page Fault}: Khi trang cần không có trong bộ nhớ chính (RAM), xảy ra page fault. 
+Hệ điều hành phải:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Chọn một khung nạn nhân (theo chính sách thay trang)
+  \item Ghi nội dung khung nạn nhân xuống disk
+  \item Nạp trang cần từ disk vào khung
+  \item Cập nhật bảng trang
+  \item Tiếp tục tiến trình bị ngắt
+\end{enumerate}
+
+\subsection{Segmentation}
+
+\textbf{Khái niệm}: Chia không gian nhớ logic thành các phần tử có ý nghĩa 
+(segments): code, data, heap, stack, ...
+
+\textbf{Dịch địa chỉ}:
+Một địa chỉ logic bao gồm $(segment\_number, offset)$:
+\begin{equation}
+\text{physical\_address} = \text{base}[\text{segment}] + \text{offset}
+\end{equation}
+
+Điều kiện hợp lệ: $0 \le \text{offset} < \text{limit}[\text{segment}]$
+
+\subsection{Các chính sách thay trang}
+
+Khi xảy ra page fault, phải chọn khung nào để loại bỏ. Các chính sách:
+
+\subsubsection*{FIFO - First In First Out}
+
+Loại bỏ trang được nạp vào sớm nhất.
+
+\textbf{Giả mã}:
+\begin{lstlisting}[language=Python,caption={FIFO replacement}]
+queue = []  # khung được nạp theo thứ tự
+
+for each memory reference m:
+    page = get_page(m)
+    if page is in memory:
+        continue
+    else:  # page fault
+        if queue.length < num_frames:
+            add_to_memory(page)
+            queue.append(page)
+        else:
+            victim = queue.pop_front()
+            remove_from_memory(victim)
+            add_to_memory(page)
+            queue.append(page)
+        faults += 1
+\end{lstlisting}
+
+\textbf{Vấn đề Belady's Anomaly}: Tăng số khung lại có thể tăng số page fault. 
+Ví dụ: với sequence $1,2,3,4,1,2,5,1,2,3,4,5$ và 4 khung:
+\begin{itemize}[leftmargin=1.5cm]
+  \item 3 khung: 9 faults
+  \item 4 khung: 10 faults
+\end{itemize}
+
+\subsubsection*{LRU - Least Recently Used}
+
+Loại bỏ trang được dùng \textbf{lâu nhất} trong quá khứ.
+
+\textbf{Giả mã}:
+\begin{lstlisting}[language=Python,caption={LRU replacement}]
+last_used = {}  # mapping page -> last use time
+
+for each memory reference m at time t:
+    page = get_page(m)
+    last_used[page] = t
+    
+    if page is in memory:
+        continue
+    else:  # page fault
+        if memory has free frame:
+            add_to_memory(page)
+        else:
+            victim = page with minimum last_used time
+            remove_from_memory(victim)
+            add_to_memory(page)
+        faults += 1
+\end{lstlisting}
+
+\textbf{Cơ sở lý thuyết}: LRU dựa trên \textit{Principle of Locality} - 
+tiến trình có xu hướng sử dụng lại dữ liệu gần đây.
+
+\subsubsection*{OPT - Optimal}
+
+Loại bỏ trang sẽ được dùng \textbf{xa nhất} trong \textbf{tương lai}.
+
+\textbf{Giả mã}:
+\begin{lstlisting}[language=Python,caption={OPT replacement}]
+next_use = {}  # mapping page -> next use time
+
+for each memory reference m at position i:
+    page = get_page(m)
+    next_use[page] = next occurrence of page in reference string
+    
+    if page is in memory:
+        continue
+    else:  # page fault
+        if memory has free frame:
+            add_to_memory(page)
+        else:
+            victim = page with maximum next_use time
+            remove_from_memory(victim)
+            add_to_memory(page)
+        faults += 1
+\end{lstlisting}
+
+\textbf{Tính chất}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Không thể triển khai thực tế vì không biết tương lai
+  \item Sử dụng làm chuẩn so sánh (benchmark) cho các chính sách khác
+  \item OPT cho số fault tối thiểu
+\end{itemize}
+
+\section{Giao tiếp liên tiến trình (IPC)}
+
+\subsection{Pipe}
+
+\textbf{Khái niệm}: Pipe là một kênh giao tiếp một chiều, tức là FIFO (First In First Out). 
+Dữ liệu được ghi vào một đầu, đọc từ đầu kia.
+
+\textbf{Quy tắc}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Write}: Thêm dữ liệu vào cuối pipe
+  \item \textbf{Read}: Lấy dữ liệu từ đầu pipe
+  \item \textbf{Blocking}: Nếu pipe trống, read chờ; nếu pipe đầy, write chờ
+\end{itemize}
+
+\textbf{Ứng dụng}: Trong shell, \texttt{command1 | command2} ghi output của command1 vào pipe, 
+command2 đọc từ pipe đó.
+
+\subsection{Signal}
+
+\textbf{Khái niệm}: Signal là một thông điệp bất đồng bộ (asynchronous). 
+Khi một signal gửi tới tiến trình, hệ điều hành ngắt tiến trình đó, 
+gọi signal handler, rồi tiếp tục tiến trình.
+
+\textbf{Các signal phổ biến}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{SIGINT} (2): Interrupt - người dùng nhấn Ctrl+C
+  \item \textbf{SIGKILL} (9): Kill - bắt buộc chết (không thể bắt)
+  \item \textbf{SIGTERM} (15): Termination - yêu cầu kết thúc (có thể bắt)
+  \item \textbf{SIGUSR1}, \textbf{SIGUSR2}: User-defined signals
+  \item \textbf{SIGSTOP}, \textbf{SIGCONT}: Dừng/tiếp tục tiến trình
+\end{itemize}
+
+\section{Shell và Pipeline}
+
+\textbf{Shell}: Trình thông dịch dòng lệnh (CLI interpreter). Đọc lệnh từ người dùng, 
+phân tích cú pháp, gọi chương trình tương ứng.
+
+\textbf{Pipeline}: Kết nối các lệnh bằng \texttt{|}, tức là output của lệnh trước 
+trở thành input của lệnh sau.
+
+\textbf{Ví dụ}:
+\begin{verbatim}
+cat file.txt | grep "search" | wc -l
+\end{verbatim}
+
+Luồng dữ liệu:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \texttt{cat file.txt} đọc file, ghi tất cả dòng vào pipe 1
+  \item \texttt{grep "search"} đọc từ pipe 1, lọc dòng chứa "search", ghi vào pipe 2
+  \item \texttt{wc -l} đếm số dòng từ pipe 2, in ra stdout
+\end{enumerate}
+
+\clearpage

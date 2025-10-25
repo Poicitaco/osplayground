@@ -1,0 +1,255 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper]{report}
+
+% ============================================================================
+% PACKAGE IMPORTS
+% ============================================================================
+
+% Geometry and typesetting
+\usepackage[a4paper,left=3cm,right=2cm,top=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,shapes.multipart}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{fancybox}
+
+% Vietnamese with XeLaTeX
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+
+% Fonts
+\newfontfamily\vnmain{Times New Roman}[Scale=1.0]
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+\setmonofont{Courier New}
+
+% Fallback fonts
+\IfFontExistsTF{Times New Roman}{}{\setmainfont{TeX Gyre Termes}}
+\IfFontExistsTF{Arial}{}{\setsansfont{TeX Gyre Heros}}
+\IfFontExistsTF{Courier New}{}{\setmonofont{Inconsolata}}
+
+% Listings setup
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!40},
+  numbers=left,
+  numberstyle=\tiny,
+  keywordstyle=\bfseries\color{blue!60!black},
+  commentstyle=\itshape\color{green!40!black},
+  stringstyle=\color{red!60!black},
+  showstringspaces=false,
+  tabsize=2,
+  breakatwhitespace=true
+}
+
+% Define additional language for pseudocode
+\lstdefinelanguage{Python}{
+  keywords={and, as, assert, async, await, break, class, continue, def, del, elif, else, except, finally, for, from, global, if, import, in, is, lambda, nonlocal, not, or, pass, raise, return, try, while, with, yield},
+  sensitive=true,
+  comment=[l]{\#},
+  morestring=[b]',
+  morestring=[b]"
+}
+
+% ============================================================================
+% METADATA MACROS
+% ============================================================================
+\newcommand{\university}{TRƯỜNG ĐẠI HỌC [TÊN TRƯỜNG]}
+\newcommand{\faculty}{KHOA CÔNG NGHỆ THÔNG TIN}
+\newcommand{\course}{MÔN: Hệ Điều Hành}
+\newcommand{\reporttitle}{OSPlayground – Mô Phỏng Hệ Điều Hành Tương Tác}
+\newcommand{\studentname}{Họ Và Tên Sinh Viên}
+\newcommand{\studentid}{[MSSV]}
+\newcommand{\instructor}{[Họ và tên GVHD]}
+\newcommand{\dateofreport}{\today}
+
+% ============================================================================
+% DOCUMENT SETUP
+% ============================================================================
+
+\title{\reporttitle}
+\author{\studentname}
+\date{\dateofreport}
+
+% ============================================================================
+% BEGIN DOCUMENT
+% ============================================================================
+
+\begin{document}
+
+% ============================================================================
+% COVER PAGE
+% ============================================================================
+\begin{titlepage}
+  \begin{center}
+    {\Large \textbf{\university}}\\[4pt]
+    {\large \textbf{\faculty}}\\[20pt]
+    {\large \course}\\[24pt]
+    \rule{0.8\linewidth}{0.6pt}\\[12pt]
+    {\LARGE \textbf{\reporttitle}}\\[8pt]
+    {\large Báo Cáo Đồ Án Tốt Nghiệp}
+    \rule{0.8\linewidth}{0.6pt}\\[32pt]
+    \vspace{8pt}
+    \begin{tabular}{p{3.5cm}l}
+      \textbf{Họ và tên sinh viên:} & \studentname\\[8pt]
+      \textbf{Mã số sinh viên:} & \studentid\\[8pt]
+      \textbf{Giảng viên hướng dẫn:} & \instructor\\[8pt]
+      \textbf{Ngày nộp báo cáo:} & \dateofreport\\[8pt]
+    \end{tabular}
+    \\
+    \vfill
+    {\small \textit{Báo cáo được biên dịch bằng \texttt{XeLaTeX} (Overleaf)}}\\
+    {\small \textit{Năm học: 2024-2025}}
+  \end{center}
+\end{titlepage}
+
+\clearpage
+
+% ============================================================================
+% INCLUDE CHAPTERS
+% ============================================================================
+
+\input{chapters/0_muc_luc_va_tom_tat.tex}
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{chapters/1_gioi_thieu.tex}
+
+\input{chapters/2_co_so_ly_thuyet.tex}
+
+\input{chapters/3_yeu_cau_pham_vi.tex}
+
+\input{chapters/4_kien_truc.tex}
+
+\input{chapters/5_chi_tiet_cpu.tex}
+
+\input{chapters/6_chi_tiet_memory.tex}
+
+\input{chapters/7_chi_tiet_ipc_shell.tex}
+
+\input{chapters/8_he_thong_diem.tex}
+
+\input{chapters/9_giao_dien.tex}
+
+% ============================================================================
+% APPENDICES (Placeholder)
+% ============================================================================
+
+\appendix
+
+\chapter{Hướng Dẫn Cài Đặt và Chạy}
+\label{app:installation}
+
+\section{Yêu cầu hệ thống}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{C++ Compiler}: GCC 7+, Clang 5+, hoặc MSVC 2017+
+  \item \textbf{CMake}: 3.20 hoặc cao hơn
+  \item \textbf{Python}: 3.6+ (cho script build)
+  \item \textbf{Tùy chọn}: SDL2 dev library (nếu build GUI)
+\end{itemize}
+
+\section{Build trên Windows (MSVC)}
+
+\begin{lstlisting}[language=bash]
+# PowerShell
+./scripts/build.ps1 -Configure
+./scripts/build.ps1 -Build
+./scripts/build.ps1 -Run
+\end{lstlisting}
+
+\section{Build trên Linux/WSL}
+
+\begin{lstlisting}[language=bash]
+# Bash
+./scripts/build.sh configure
+./scripts/build.sh build
+./scripts/build.sh run
+\end{lstlisting}
+
+\section{Build với GUI (tùy chọn)}
+
+\begin{lstlisting}[language=bash]
+# Cài SDL2 dev
+apt-get install libsdl2-dev  # Linux
+brew install sdl2            # macOS
+
+# Build với GUI
+mkdir build && cd build
+cmake -DUSE_GFX_SDL_IMGUI=ON ..
+make
+./osplayground
+\end{lstlisting}
+
+\chapter{Tài liệu tham khảo}
+\addcontentsline{toc}{chapter}{Tài liệu tham khảo}
+
+\begin{thebibliography}{9}
+
+\bibitem{silberschatz}
+Silberschatz, A., Galvin, P. B., Gagne, G. (2018). 
+\textit{Operating System Concepts (10th ed.)}. 
+Wiley.
+
+\bibitem{ostep}
+Arpaci-Dusseau, R. H., Arpaci-Dusseau, A. C. (2018). 
+\textit{Operating Systems: Three Easy Pieces}. 
+Arpaci-Dusseau Books.
+
+\bibitem{tanenbaum}
+Tanenbaum, A. S., Bos, H. (2014). 
+\textit{Modern Operating Systems (4th ed.)}. 
+Pearson.
+
+\bibitem{imgui}
+Cornut, O. (2023). 
+\textit{Dear ImGui}. 
+GitHub: \url{https://github.com/ocornut/imgui}
+
+\bibitem{sdl2}
+SDL2 Project (2023).
+\textit{Simple DirectMedia Layer 2.0}.
+\url{https://www.libsdl.org/}
+
+\bibitem{cmake}
+CMake Project. (2023).
+\textit{CMake 3.27+}.
+\url{https://cmake.org/}
+
+\bibitem{cpp17}
+ISO/IEC. (2017).
+\textit{ISO/IEC 14882:2017 – Programming Language C++}.
+
+\bibitem{json}
+nlohmann. (2023).
+\textit{JSON for Modern C++}.
+GitHub: \url{https://github.com/nlohmann/json}
+
+\end{thebibliography}
+
+% ============================================================================
+% END OF DOCUMENT
+% ============================================================================
+
+\end{document}

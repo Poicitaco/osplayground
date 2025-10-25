@@ -1,0 +1,210 @@
+% ============================================================================
+% CHƯƠNG 3: YÊU CẦU VÀ PHẠM VI
+% ============================================================================
+
+\chapter{Yêu cầu và phạm vi}
+\label{ch:requirements}
+
+\section{Yêu cầu chức năng}
+
+Phần này liệt kê các yêu cầu chức năng (Functional Requirements) của dự án, 
+được phân chia theo các mô-đun chính.
+
+\subsection{Yêu cầu CPU Scheduling (CPU-001 đến CPU-010)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{CPU-001}: Hệ thống phải cài đặt thuật toán FCFS với kết quả AWT/ATT chính xác
+  \item \textbf{CPU-002}: Hệ thống phải cài đặt thuật toán SJF không tiền nhiệm
+  \item \textbf{CPU-003}: Hệ thống phải cài đặt thuật toán SRTF (preemptive SJF)
+  \item \textbf{CPU-004}: Hệ thống phải cài đặt thuật toán Round Robin với quantum tuỳ chỉnh
+  \item \textbf{CPU-005}: Hệ thống phải cài đặt Priority Scheduling (non-preemptive)
+  \item \textbf{CPU-006}: Hệ thống phải cài đặt Priority Scheduling (preemptive)
+  \item \textbf{CPU-007}: Tất cả thuật toán phải xuất biểu đồ Gantt (ASCII trong CLI, vector trong GUI)
+  \item \textbf{CPU-008}: Tính toán AWT, ATT phải chính xác để 2 chữ số thập phân
+  \item \textbf{CPU-009}: So sánh hiệu năng các thuật toán trên cùng dataset
+  \item \textbf{CPU-010}: Log chi tiết từng bước thực thi mỗi thuật toán
+\end{itemize}
+
+\subsection{Yêu cầu Memory Management (MEM-001 đến MEM-010)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{MEM-001}: Hỗ trợ dịch địa chỉ Paging (logic → physical)
+  \item \textbf{MEM-002}: Hỗ trợ dịch địa chỉ Segmentation
+  \item \textbf{MEM-003}: Cài đặt chính sách thay trang FIFO
+  \item \textbf{MEM-004}: Cài đặt chính sách thay trang LRU
+  \item \textbf{MEM-005}: Cài đặt chính sách thay trang OPT (Optimal)
+  \item \textbf{MEM-006}: Tính toán số page fault chính xác
+  \item \textbf{MEM-007}: Lưu trữ trạng thái khung trang (\textit{frame states}) theo từng bước
+  \item \textbf{MEM-008}: Hiển thị lưới khung trang (frame grid) trong GUI
+  \item \textbf{MEM-009}: Hỗ trợ cấu hình số khung (frames) từ kịch bản
+  \item \textbf{MEM-010}: Xuất báo cáo fault rate, so sánh các chính sách
+\end{itemize}
+
+\subsection{Yêu cầu IPC và Signal (IPC-001 đến IPC-008)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{IPC-001}: Mô phỏng Pipe với FIFO semantics
+  \item \textbf{IPC-002}: Hỗ trợ Signal SIGINT (tín hiệu ngắt)
+  \item \textbf{IPC-003}: Hỗ trợ Signal SIGUSR1 (tín hiệu người dùng 1)
+  \item \textbf{IPC-004}: Hỗ trợ Signal SIGKILL (bắt buộc kết thúc)
+  \item \textbf{IPC-005}: Xử lý signal handler và cập nhật trạng thái tiến trình
+  \item \textbf{IPC-006}: Log sự kiện gửi/nhận signal
+  \item \textbf{IPC-007}: Các signal ảnh hưởng tới điểm số IPC
+  \item \textbf{IPC-008}: Giao diện điều khiển signal qua CLI/TUI/GUI
+\end{itemize}
+
+\subsection{Yêu cầu Shell (SHELL-001 đến SHELL-008)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{SHELL-001}: Triển khai 8+ lệnh cơ bản (ps, kill, cpu, mem, cat, grep, wc, echo)
+  \item \textbf{SHELL-002}: Hỗ trợ pipeline với toán tử \verb+|+
+  \item \textbf{SHELL-003}: Lệnh \verb|ps| liệt kê tiến trình mô phỏng
+  \item \textbf{SHELL-004}: Lệnh \verb|kill| gửi SIGKILL đến tiến trình
+  \item \textbf{SHELL-005}: Lệnh \verb|cpu <algo> [q]| chạy lập lịch CPU
+  \item \textbf{SHELL-006}: Lệnh \verb|mem <policy> <F>| chạy thay trang
+  \item \textbf{SHELL-007}: Xử lý lỗi và thông báo lỗi rõ ràng
+  \item \textbf{SHELL-008}: Hỗ trợ lịch sử lệnh (command history)
+\end{itemize}
+
+\subsection{Yêu cầu Giao diện (UI-001 đến UI-015)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{UI-001}: Giao diện CLI cơ bản với menu chính
+  \item \textbf{UI-002}: Giao diện TUI Dashboard với các panel
+  \item \textbf{UI-003}: Giao diện GUI SDL2/ImGui (tùy chọn)
+  \item \textbf{UI-004}: Panel CPU với Gantt chart tương tác
+  \item \textbf{UI-005}: Panel Memory với lưới khung trang
+  \item \textbf{UI-006}: Panel IPC hiển thị pipe, signal
+  \item \textbf{UI-007}: Panel Scenarios: nạp/lưu kịch bản JSON
+  \item \textbf{UI-008}: Panel Score hiển thị điểm tổng hợp
+  \item \textbf{UI-009}: Dark theme UI, responsive layout
+  \item \textbf{UI-010}: Zoom, scroll, pan trong GUI
+  \item \textbf{UI-011}: Xuất ảnh chụp (screenshot) từ GUI
+  \item \textbf{UI-012}: Hỗ trợ click lựa chọn thuật toán, tham số
+  \item \textbf{UI-013}: Hiển thị trạng thái tức thời (real-time)
+  \item \textbf{UI-014}: Thông báo lỗi rõ ràng (error messages)
+  \item \textbf{UI-015}: Hỗ trợ keyboard shortcuts
+\end{itemize}
+
+\subsection{Yêu cầu hệ thống điểm (SCORE-001 đến SCORE-005)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{SCORE-001}: Tính CPU Score dựa trên công thức chuẩn hoá
+  \item \textbf{SCORE-002}: Tính Memory Score dựa trên fault rate
+  \item \textbf{SCORE-003}: Tính IPC Score dựa trên số signal
+  \item \textbf{SCORE-004}: Tính System Stability Score (trung bình có trọng số)
+  \item \textbf{SCORE-005}: Lưu và so sánh điểm qua các lần chạy
+\end{itemize}
+
+\section{Yêu cầu phi chức năng}
+
+\subsection{Hiệu năng (Performance)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{PERF-001}: Thời gian xử lý CPU Scheduling < 100ms cho 100 tiến trình
+  \item \textbf{PERF-002}: Thời gian xử lý Memory Simulation < 50ms cho 1000 references
+  \item \textbf{PERF-003}: Khởi động GUI < 2 giây
+  \item \textbf{PERF-004}: Render Gantt chart ≥ 30 FPS
+\end{itemize}
+
+\subsection{Khả năng sử dụng (Usability)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{USE-001}: Giao diện trực quan, dễ học cho sinh viên mới
+  \item \textbf{USE-002}: Tài liệu hướng dẫn chi tiết với ví dụ
+  \item \textbf{USE-003}: Hỗ trợ multiple language (Vietnamese, English)
+  \item \textbf{USE-004}: Tùy chỉnh giao diện (theme, font size)
+\end{itemize}
+
+\subsection{Độ tin cậy (Reliability)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{REL-001}: Kết quả tính toán phải chính xác tới 2 chữ số thập phân
+  \item \textbf{REL-002}: Không crash trên input hợp lệ
+  \item \textbf{REL-003}: Xử lý gracefully các input không hợp lệ
+  \item \textbf{REL-004}: Recovery từ file JSON lỗi với thông báo rõ ràng
+\end{itemize}
+
+\subsection{Duy trì (Maintainability)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{MAINT-001}: Code theo chuẩn C++17, SOLID principles
+  \item \textbf{MAINT-002}: Mô-đun hóa: mỗi khối có giao diện rõ ràng
+  \item \textbf{MAINT-003}: Unit test coverage ≥ 70\%
+  \item \textbf{MAINT-004}: Inline documentation + separate docs
+  \item \textbf{MAINT-005}: Build system (CMake) dễ cấu hình trên nhiều nền tảng
+\end{itemize}
+
+\subsection{Bảo mật (Security)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{SEC-001}: Input validation trên tất cả user input
+  \item \textbf{SEC-002}: Không bị buffer overflow
+  \item \textbf{SEC-003}: Xử lý file JSON an toàn
+\end{itemize}
+
+\subsection{Tính khả chuyển (Portability)}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{PORT-001}: Chạy trên Windows (MSVC), Linux (GCC/Clang), macOS (Clang)
+  \item \textbf{PORT-002}: Hỗ trợ 64-bit, 32-bit (nếu có)
+  \item \textbf{PORT-003}: Không phụ thuộc vào thư viện OS-specific
+\end{itemize}
+
+\section{Các ràng buộc và giới hạn}
+
+\subsection{Giới hạn chức năng}
+
+\begin{table}[H]
+\centering
+\caption{Giới hạn chức năng của hệ thống}
+\begin{tabular}{ll}
+\toprule
+\textbf{Chỉ tiêu} & \textbf{Giới hạn} \\
+\midrule
+Số tiến trình tối đa & 1000 \\
+Thời gian burst tối đa & 10000 units \\
+Số khung bộ nhớ tối đa & 10000 \\
+Độ dài reference string & 100000 \\
+Quantum RR & 1 đến 1000 units \\
+Mức ưu tiên & 1 đến 40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Giới hạn kỹ thuật}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Ngôn ngữ}: C++17 trở lên (C++20 không yêu cầu)
+  \item \textbf{Compiler}: GCC 7+, Clang 5+, MSVC 2017+
+  \item \textbf{RAM}: Tối thiểu 512MB (khuyến cáo 2GB)
+  \item \textbf{Disk}: 100MB để cài đặt (có GUI)
+  \item \textbf{GPU}: Không yêu cầu (GUI dùng software rendering)
+\end{itemize}
+
+\subsection{Ràng buộc phát triển}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Dự án là open-source (license MIT)
+  \item Không sử dụng thư viện GPL để tránh ràng buộc GPL
+  \item Tất cả dependencies phải được ghi rõ trong CMakeLists.txt
+  \item Thường xuyên cập nhật documentation
+\end{itemize}
+
+\section{Tiêu chí chấp nhận}
+
+Dự án được coi là hoàn thành khi:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item ✓ Tất cả yêu cầu chức năng đạt (CPU-001 → SHELL-008)
+  \item ✓ Kiểm thử chi tiết (unit test, integration test, UAT)
+  \item ✓ Tất cả lỗi nghiêm trọng được sửa
+  \item ✓ Documentation hoàn chỉnh (user guide, API doc, architecture)
+  \item ✓ Hiệu năng đạt mục tiêu (< 100ms cho CPU, < 50ms cho Memory)
+  \item ✓ GUI chạy mượt mà, không flickering
+  \item ✓ Cross-platform testing thành công
+  \item ✓ Code review pass
+  \item ✓ Báo cáo đồ án hoàn chỉnh, trình bày rõ ràng
+\end{enumerate}
+
+\clearpage

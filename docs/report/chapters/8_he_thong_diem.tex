@@ -1,0 +1,226 @@
+% ============================================================================
+% CHƯƠNG 8: HỆ THỐNG ĐIỂM VÀ ĐÁNH GIÁ
+% ============================================================================
+
+\chapter{Hệ thống điểm và đánh giá}
+\label{ch:scoring}
+
+\section{Khái niệm tổng quát}
+
+OSPlayground sử dụng hệ thống điểm tổng hợp (System Stability Score) để đánh giá 
+toàn bộ hiệu năng của mô phỏng hệ thống. Điểm được tính dựa trên ba thành phần:
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{CPU Score}: Đánh giá hiệu năng lập lịch CPU
+  \item \textbf{Memory Score}: Đánh giá hiệu năng quản lý bộ nhớ
+  \item \textbf{IPC Score}: Đánh giá ảnh hưởng của giao tiếp liên tiến trình
+\end{enumerate}
+
+Các điểm thành phần được kết hợp với trọng số để tạo ra System Stability Score:
+
+\begin{equation}
+\text{TOTAL} = 0.4 \times \text{CPU} + 0.4 \times \text{Memory} + 0.2 \times \text{IPC}
+\end{equation}
+
+\section{CPU Score}
+
+\subsection{Công thức}
+
+\begin{equation}
+\text{CPU Score} = 100 \cdot \frac{B}{B + (\text{AWT} + \text{ATT})}, \quad B = 20
+\end{equation}
+
+Trong đó:
+\begin{itemize}[leftmargin=1.5cm]
+  \item $B = 20$ là hằng số chuẩn hoá
+  \item AWT = Average Waiting Time
+  \item ATT = Average Turnaround Time
+\end{itemize}
+
+\subsection{Giải thích}
+
+Công thức này được thiết kế để:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Khuyến khích AWT và ATT thấp
+  \item Giữ điểm trong khoảng [0, 100]
+  \item Đạt 50 điểm khi $(AWT + ATT) = B = 20$
+  \item Đạt 100 điểm khi AWT + ATT = 0 (lý tưởng)
+\end{enumerate}
+
+\subsection{Ví dụ}
+
+\begin{table}[H]
+\centering
+\caption{Ví dụ tính CPU Score}
+\begin{tabular}{cccc}
+\toprule
+\textbf{AWT} & \textbf{ATT} & \textbf{AWT+ATT} & \textbf{CPU Score} \\
+\midrule
+0 & 0 & 0 & 100.0 \\
+5 & 5 & 10 & 66.7 \\
+10 & 10 & 20 & 50.0 \\
+15 & 15 & 30 & 40.0 \\
+20 & 20 & 40 & 33.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cài đặt}
+
+\begin{lstlisting}[language=C++,caption={CPU Score Computation}]
+double computeCPUScore(double awt, double att) {
+  const double B = 20.0;
+  double denominator = awt + att;
+  
+  if (denominator == 0) {
+    return 100.0;  // Perfect case
+  }
+  
+  double score = 100.0 * B / (B + denominator);
+  return min(score, 100.0);  // Cap at 100
+}
+\end{lstlisting}
+
+\section{Memory Score}
+
+\subsection{Công thức}
+
+\begin{equation}
+\text{Memory Score} = 100 \times \left(1 - \frac{\text{faults}}{\text{steps}}\right)
+\end{equation}
+
+Trong đó:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{faults} = số lần page fault xảy ra
+  \item \texttt{steps} = tổng số memory references
+\end{itemize}
+
+\subsection{Giải thích}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Fault rate = faults / steps (tỷ lệ lỗi trang)
+  \item Hit rate = 1 - fault rate (tỷ lệ thành công)
+  \item Memory Score = Hit rate × 100
+  \item Điểm 100 khi không có fault (tất cả hit)
+  \item Điểm 0 khi fault rate = 100\%
+\end{itemize}
+
+\subsection{Ví dụ}
+
+\begin{table}[H]
+\centering
+\caption{Ví dụ tính Memory Score}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Faults} & \textbf{Steps} & \textbf{Hit Rate} & \textbf{Score} \\
+\midrule
+0 & 100 & 100\% & 100.0 \\
+10 & 100 & 90\% & 90.0 \\
+20 & 100 & 80\% & 80.0 \\
+50 & 100 & 50\% & 50.0 \\
+100 & 100 & 0\% & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cài đặt}
+
+\begin{lstlisting}[language=C++,caption={Memory Score Computation}]
+double computeMemoryScore(int faults, int steps) {
+  if (steps == 0) {
+    return 100.0;  // No simulation
+  }
+  
+  double fault_rate = static_cast<double>(faults) / steps;
+  double hit_rate = 1.0 - fault_rate;
+  double score = hit_rate * 100.0;
+  
+  return max(0.0, min(score, 100.0));
+}
+\end{lstlisting}
+
+\section{IPC Score}
+
+\subsection{Công thức}
+
+\begin{equation}
+\text{IPC Score} = \max\left(0, 100 - 15 \times \text{kills}\right)
+\end{equation}
+
+Trong đó:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{kills} = số lần SIGKILL được gửi
+  \item Hệ số 15 = penalty per kill (có thể tuỳ chỉnh)
+\end{itemize}
+
+\subsection{Giải thích}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Mục tiêu: khuyến khích sử dụng signal có trách nhiệm
+  \item Mỗi SIGKILL làm giảm 15 điểm
+  \item Khi kills ≥ 7, điểm trở thành 0
+  \item SIGINT, SIGUSR1 không phạt (chỉ là thông báo)
+\end{itemize}
+
+\subsection{Ví dụ}
+
+\begin{table}[H]
+\centering
+\caption{Ví dụ tính IPC Score}
+\begin{tabular}{cc}
+\toprule
+\textbf{Kills} & \textbf{IPC Score} \\
+\midrule
+0 & 100.0 \\
+1 & 85.0 \\
+2 & 70.0 \\
+3 & 55.0 \\
+4 & 40.0 \\
+5 & 25.0 \\
+6 & 10.0 \\
+7+ & 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cài đặt}
+
+\begin{lstlisting}[language=C++,caption={IPC Score Computation}]
+double computeIPCScore(int kills) {
+  const int PENALTY_PER_KILL = 15;
+  double score = 100.0 - (kills * PENALTY_PER_KILL);
+  return max(0.0, min(score, 100.0));
+}
+\end{lstlisting}
+
+\section{System Stability Score}
+
+\subsection{Công thức tổng hợp}
+
+\begin{equation}
+\text{System Stability Score} = 0.4 \times \text{CPU} + 0.4 \times \text{Memory} + 0.2 \times \text{IPC}
+\end{equation}
+
+\subsection{Giải thích trọng số}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{CPU (40\%)}: Lập lịch CPU là khía cạnh chính của OS
+  \item \textbf{Memory (40\%)}: Quản lý bộ nhớ cũng rất quan trọng
+  \item \textbf{IPC (20\%)}: Giao tiếp liên tiến trình ít hơn nhưng cần xem xét
+\end{itemize}
+
+\subsection{Ví dụ}
+
+\begin{table}[H]
+\centering
+\caption{Ví dụ tính System Stability Score}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{CPU} & \textbf{Memory} & \textbf{IPC} & \textbf{Calculation} & \textbf{Total} \\
+\midrule
+100 & 100 & 100 & $0.4 \times 100 + 0.4 \times 100 + 0.2 \times 100$ & 100.0 \\
+80 & 90 & 70 & $0.4 \times 80 + 0.4 \times 90 + 0.2 \times 70$ & 82.0 \\
+50 & 50 & 50 & $0.4 \times 50 + 0.4 \times 50 + 0.2 \times 50$ & 50.0 \\
+100 & 0 & 100 & $0.4 \times 100 + 0.4 \times 0 + 0.2 \times 100$ & 60.0 \\
+\bottomrule
+\end{tabular}

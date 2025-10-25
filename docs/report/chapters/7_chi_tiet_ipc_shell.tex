@@ -1,0 +1,468 @@
+% ============================================================================
+% CHƯƠNG 7: CHI TIẾT IPC VÀ SHELL
+% ============================================================================
+
+\chapter{Thiết kế chi tiết - IPC và Shell}
+\label{ch:ipc_shell}
+
+\section{Inter-Process Communication (IPC)}
+
+\subsection{Pipe}
+
+\subsubsection{Mô hình}
+
+Pipe là một hàng đợi FIFO một chiều:
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Write end}: Ghi dữ liệu vào cuối
+  \item \textbf{Read end}: Đọc dữ liệu từ đầu
+  \item \textbf{Buffer}: Lưu trữ tối đa N bytes
+\end{itemize}
+
+\subsubsection{Cài đặt}
+
+\begin{lstlisting}[language=C++,caption={Pipe implementation}]
+class Pipe {
+private:
+  queue<char> buffer;
+  const int MAX_SIZE = 1024;
+  
+public:
+  bool write(const string& data) {
+    for (char c : data) {
+      if (buffer.size() >= MAX_SIZE) {
+        return false;  // Buffer đầy, write block
+      }
+      buffer.push(c);
+    }
+    return true;
+  }
+  
+  string read(int count) {
+    string result;
+    while (count > 0 && !buffer.empty()) {
+      result += buffer.front();
+      buffer.pop();
+      count--;
+    }
+    return result;
+  }
+  
+  bool isEmpty() const { return buffer.empty(); }
+  int size() const { return buffer.size(); }
+};
+\end{lstlisting}
+
+\subsection{Signal}
+
+\subsubsection{Các signal hỗ trợ}
+
+\begin{table}[H]
+\centering
+\caption{Các signal được hỗ trợ}
+\begin{tabular}{lll}
+\toprule
+\textbf{Signal} & \textbf{Số} & \textbf{Ý nghĩa} \\
+\midrule
+SIGINT & 2 & Interrupt (Ctrl+C) \\
+SIGUSR1 & 10 & User-defined 1 \\
+SIGKILL & 9 & Kill (không bắt được) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Cài đặt}
+
+\begin{lstlisting}[language=C++,caption={Signal handling}]
+enum class Signal { SIGINT, SIGUSR1, SIGKILL };
+
+struct SignalEvent {
+  int pid;
+  Signal sig;
+  int timestamp;
+  bool delivered;
+};
+
+class SignalHandler {
+private:
+  vector<SignalEvent> events;
+  
+public:
+  void sendSignal(int pid, Signal sig, int time) {
+    events.push_back({pid, sig, time, false});
+    
+    // Log event
+    string sig_name = (sig == Signal::SIGINT) ? "SIGINT" :
+                      (sig == Signal::SIGUSR1) ? "SIGUSR1" :
+                      "SIGKILL";
+    log("Send " + sig_name + " to PID " + to_string(pid));
+  }
+  
+  void handleSignal(int pid, Signal sig) {
+    for (auto& event : events) {
+      if (event.pid == pid && event.sig == sig && !event.delivered) {
+        event.delivered = true;
+        
+        if (sig == Signal::SIGKILL) {
+          // Tiến trình bị kill
+          // Cập nhật trạng thái tiến trình
+        }
+        break;
+      }
+    }
+  }
+  
+  const vector<SignalEvent>& getEvents() const {
+    return events;
+  }
+};
+\end{lstlisting}
+
+\subsection{IPCManager}
+
+\begin{lstlisting}[language=C++,caption={IPC Manager}]
+class IPCManager {
+private:
+  map<int, Pipe> pipes;
+  SignalHandler signal_handler;
+  
+public:
+  void createPipe(int pipe_id) {
+    pipes[pipe_id] = Pipe();
+  }
+  
+  void writeToPipe(int pipe_id, const string& data) {
+    if (pipes.find(pipe_id) != pipes.end()) {
+      pipes[pipe_id].write(data);
+    }
+  }
+  
+  string readFromPipe(int pipe_id, int count) {
+    if (pipes.find(pipe_id) != pipes.end()) {
+      return pipes[pipe_id].read(count);
+    }
+    return "";
+  }
+  
+  void sendSignal(int pid, Signal sig, int time) {
+    signal_handler.sendSignal(pid, sig, time);
+  }
+  
+  void handleSignal(int pid, Signal sig) {
+    signal_handler.handleSignal(pid, sig);
+  }
+  
+  const vector<SignalEvent>& getSignalEvents() const {
+    return signal_handler.getEvents();
+  }
+};
+\end{lstlisting}
+
+\section{Shell mini}
+
+\subsection{Cú pháp và ngữ pháp}
+
+\subsubsection{EBNF - Extended Backus-Naur Form}
+
+\begin{lstlisting}[caption={EBNF của Shell mini}]
+program       ::= command_line EOF
+command_line  ::= command ( '|' command )*
+command       ::= CMD_NAME [ ARG { ARG } ]
+CMD_NAME      ::= 'ps' | 'kill' | 'cpu' | 'mem' | 'cat' 
+                | 'grep' | 'wc' | 'echo' | 'sig' | 'ls'
+ARG           ::= STRING
+STRING        ::= sequence_of_non_whitespace_characters
+\end{lstlisting}
+
+\subsection{Các lệnh được hỗ trợ}
+
+\subsubsection{ps - List processes}
+
+\begin{lstlisting}
+ps [options]
+  -a: Show all processes
+  -r: Show running processes only
+  (default: show all)
+\end{lstlisting}
+
+Ví dụ output:
+\begin{verbatim}
+PID  ARRIVAL BURST PRIORITY STATE
+1    0       10    2        Ready
+2    5       15    1        Running
+3    10      8     3        Terminated
+\end{verbatim}
+
+\subsubsection{kill - Kill a process}
+
+\begin{lstlisting}
+kill <PID>
+  Gửi SIGKILL đến PID
+\end{lstlisting}
+
+\subsubsection{sig - Send signal}
+
+\begin{lstlisting}
+sig <PID> <SIGNAME>
+  SIGNAME: INT, USR1, KILL
+\end{lstlisting}
+
+\subsubsection{cpu - Run CPU scheduler}
+
+\begin{lstlisting}
+cpu <ALGORITHM> [QUANTUM]
+  ALGORITHM: fcfs, sjf, srtf, rr, prio_np, prio_p
+  QUANTUM: cho RR (default: 4)
+\end{lstlisting}
+
+\subsubsection{mem - Run memory simulator}
+
+\begin{lstlisting}
+mem <POLICY> <FRAMES> [REFERENCES...]
+  POLICY: fifo, lru, opt, all
+  FRAMES: số khung bộ nhớ
+  REFERENCES: chuỗi tham chiếu (cách nhau bằng dấu cách)
+\end{lstlisting}
+
+\subsubsection{cat, grep, wc - Text processing}
+
+\begin{lstlisting}
+cat [FILE]
+  Đọc file hoặc stdin
+
+grep PATTERN
+  Lọc dòng chứa pattern
+
+wc [OPTIONS]
+  -l: đếm dòng (default)
+  -w: đếm từ
+  -c: đếm ký tự
+\end{lstlisting}
+
+\subsubsection{echo - Print}
+
+\begin{lstlisting}
+echo [TEXT...]
+  In text ra stdout
+\end{lstlisting}
+
+\subsubsection{ls - List files}
+
+\begin{lstlisting}
+ls [DIRECTORY]
+  Liệt kê file/thư mục
+\end{lstlisting}
+
+\subsection{Pipeline}
+
+Pipeline kết nối các lệnh bằng toán tử \verb+|+:
+
+\begin{lstlisting}
+command1 | command2 | command3
+\end{lstlisting}
+
+Luồng dữ liệu:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \texttt{command1} tạo output → vector<string> (mỗi dòng là một string)
+  \item Output truyền tới \texttt{command2} làm input
+  \item \texttt{command2} xử lý → output mới
+  \item \texttt{command3} nhận input từ command2
+  \item Kết quả cuối cùng được in ra stdout
+\end{enumerate}
+
+\subsection{Cài đặt Shell Parser}
+
+\begin{lstlisting}[language=C++,caption={Shell Parser}]
+struct Command {
+  string name;
+  vector<string> args;
+};
+
+class ShellParser {
+public:
+  vector<Command> parseLine(const string& line) {
+    vector<Command> commands;
+    
+    // Tách bằng '|'
+    vector<string> pipeline_parts = split(line, '|');
+    
+    for (const string& part : pipeline_parts) {
+      // Tách bằng whitespace
+      vector<string> tokens = split(part, ' ');
+      
+      if (tokens.empty()) continue;
+      
+      Command cmd;
+      cmd.name = tokens[0];
+      for (int i = 1; i < tokens.size(); ++i) {
+        cmd.args.push_back(tokens[i]);
+      }
+      
+      commands.push_back(cmd);
+    }
+    
+    return commands;
+  }
+  
+private:
+  vector<string> split(const string& s, char delim) {
+    vector<string> result;
+    string current;
+    
+    for (char c : s) {
+      if (c == delim) {
+        if (!current.empty()) {
+          result.push_back(current);
+          current.clear();
+        }
+      } else {
+        current += c;
+      }
+    }
+    
+    if (!current.empty()) {
+      result.push_back(current);
+    }
+    
+    return result;
+  }
+};
+\end{lstlisting}
+
+\subsection{Cài đặt Shell Executor}
+
+\begin{lstlisting}[language=C++,caption={Shell Executor}]
+class ShellExecutor {
+private:
+  SystemState& system_state;
+  
+public:
+  ShellExecutor(SystemState& sys) : system_state(sys) {}
+  
+  vector<string> executePipeline(const vector<Command>& commands) {
+    vector<string> output;
+    
+    for (int i = 0; i < commands.size(); ++i) {
+      vector<string> input = output;
+      output = executeCommand(commands[i], input);
+    }
+    
+    return output;
+  }
+  
+private:
+  vector<string> executeCommand(const Command& cmd, 
+                                const vector<string>& input) {
+    vector<string> output;
+    
+    if (cmd.name == "ps") {
+      output = executPS(cmd.args);
+    } else if (cmd.name == "kill") {
+      output = executeKill(cmd.args);
+    } else if (cmd.name == "cpu") {
+      output = executeCPU(cmd.args);
+    } else if (cmd.name == "mem") {
+      output = executeMEM(cmd.args);
+    } else if (cmd.name == "grep") {
+      output = executeGrep(cmd.args, input);
+    } else if (cmd.name == "wc") {
+      output = executeWC(cmd.args, input);
+    } else if (cmd.name == "cat") {
+      output = executeCat(cmd.args);
+    } else if (cmd.name == "echo") {
+      output = executeEcho(cmd.args);
+    }
+    
+    return output;
+  }
+  
+  vector<string> executeGrep(const vector<string>& args, 
+                            const vector<string>& input) {
+    vector<string> output;
+    if (args.empty()) return output;
+    
+    string pattern = args[0];
+    for (const string& line : input) {
+      if (line.find(pattern) != string::npos) {
+        output.push_back(line);
+      }
+    }
+    return output;
+  }
+  
+  vector<string> executeWC(const vector<string>& args, 
+                          const vector<string>& input) {
+    vector<string> output;
+    
+    bool count_lines = true;
+    if (!args.empty() && args[0] == "-w") {
+      count_lines = false;
+    }
+    
+    if (count_lines) {
+      output.push_back(to_string(input.size()));
+    } else {
+      int total_words = 0;
+      for (const string& line : input) {
+        total_words += count_words(line);
+      }
+      output.push_back(to_string(total_words));
+    }
+    
+    return output;
+  }
+  
+  int count_words(const string& s) {
+    int count = 0;
+    bool in_word = false;
+    
+    for (char c : s) {
+      if (isspace(c)) {
+        in_word = false;
+      } else if (!in_word) {
+        in_word = true;
+        count++;
+      }
+    }
+    
+    return count;
+  }
+};
+\end{lstlisting}
+
+\section{Ví dụ sử dụng Shell}
+
+\subsection{Ví dụ 1: Liệt kê tiến trình}
+
+\begin{verbatim}
+$ ps
+PID  ARRIVAL BURST PRIORITY STATE
+1    0       10    2        Ready
+2    5       15    1        Ready
+3    10      8     3        Ready
+\end{verbatim}
+
+\subsection{Ví dụ 2: Chạy CPU Scheduler}
+
+\begin{verbatim}
+$ cpu rr 4
+Running Round Robin with quantum=4 on 3 processes
+Average Waiting Time: 8.33
+Average Turnaround Time: 18.33
+Gantt: P1 | P2 | P3 | P1 | P2
+\end{verbatim}
+
+\subsection{Ví dụ 3: Pipeline}
+
+\begin{verbatim}
+$ ps | grep "PID" | wc -l
+3
+\end{verbatim}
+
+Giải thích:
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \texttt{ps} xuất ra danh sách tiến trình (4 dòng: header + 3 process)
+  \item \texttt{grep "PID"} lọc dòng chứa "PID" → 1 dòng (header)
+  \item \texttt{wc -l} đếm số dòng → 1
+\end{enumerate}
+
+\clearpage

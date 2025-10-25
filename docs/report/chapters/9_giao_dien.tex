@@ -1,0 +1,316 @@
+% ============================================================================
+% CHƯƠNG 9: GIAO DIỆN NGƯỜI DÙNG
+% ============================================================================
+
+\chapter{Giao diện người dùng}
+\label{ch:ui}
+
+\section{Tổng quan ba lớp giao diện}
+
+OSPlayground cung cấp ba lớp giao diện để phục vụ các nhu cầu khác nhau:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{CLI (Command Line Interface)}: Đơn giản, nhanh gọn, dành cho developer
+  \item \textbf{TUI (Text User Interface)}: Dashboard tương tác, menu, dành cho học tập
+  \item \textbf{GUI (Graphical User Interface)}: Đồ hoạ, trực quan, dành cho trình bày
+\end{itemize}
+
+\section{CLI - Command Line Interface}
+
+\subsection{Cấu trúc}
+
+\begin{verbatim}
+$ ./osplayground
+OSPlayground v1.0.0
+=================================
+1. CPU Scheduling
+2. Memory Management
+3. IPC & Signals
+4. Shell Terminal
+5. View Scores
+6. Load Scenario
+0. Exit
+
+Choose option: 
+\end{verbatim}
+
+\subsection{Menu chính}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{CPU Scheduling}
+  \begin{enumerate}
+    \item Select algorithm (FCFS, SJF, SRTF, RR, Priority NP, Priority P)
+    \item Set quantum (cho RR)
+    \item Input processes
+    \item View Gantt chart (ASCII)
+    \item View AWT, ATT
+  \end{enumerate}
+  
+  \item \textbf{Memory Management}
+  \begin{enumerate}
+    \item Select policy (FIFO, LRU, OPT, All)
+    \item Input frames, reference string
+    \item View faults, hit rate
+    \item View frame states
+  \end{enumerate}
+  
+  \item \textbf{IPC \& Signals}
+  \begin{enumerate}
+    \item Send signal (SIGINT, SIGUSR1, SIGKILL)
+    \item View events
+  \end{enumerate}
+  
+  \item \textbf{Shell Terminal}
+  \begin{enumerate}
+    \item Enter commands
+    \item Support pipeline
+  \end{enumerate}
+  
+  \item \textbf{View Scores}
+  \begin{enumerate}
+    \item Show CPU, Memory, IPC scores
+    \item Show System Stability Score
+  \end{enumerate}
+  
+  \item \textbf{Load Scenario}
+  \begin{enumerate}
+    \item Load JSON file
+    \item Auto-populate processes/memory config
+  \end{enumerate}
+\end{enumerate}
+
+\section{TUI - Text User Interface}
+
+\subsection{Thành phần}
+
+TUI cung cấp dashboard tương tác với các panel:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=0.5cm]
+  \draw (0,0) rectangle (12,8);
+  \draw (0,7) -- (12,7);
+  
+  \node[anchor=west] at (0.2, 7.5) {\textbf{OSPlayground Dashboard}};
+  
+  % Top panels
+  \draw (0,6) rectangle (4,7);
+  \draw (4,6) rectangle (8,7);
+  \draw (8,6) rectangle (12,7);
+  
+  \node[anchor=center] at (2, 6.5) {CPU Score};
+  \node[anchor=center] at (6, 6.5) {Memory Score};
+  \node[anchor=center] at (10, 6.5) {IPC Score};
+  
+  % Main panel
+  \draw (0,0.5) rectangle (9,6);
+  \node[anchor=nw] at (0.1, 5.9) {Main Panel:};
+  \node[anchor=nw] at (0.2, 5.5) {1. CPU Scheduler};
+  \node[anchor=nw] at (0.2, 5.1) {2. Memory Sim};
+  \node[anchor=nw] at (0.2, 4.7) {3. IPC Manager};
+  \node[anchor=nw] at (0.2, 4.3) {4. Shell Terminal};
+  \node[anchor=nw] at (0.2, 3.9) {5. Scenario Loader};
+  
+  % Status panel
+  \draw (9,0.5) rectangle (12,6);
+  \node[anchor=nw] at (9.1, 5.9) {Status:};
+  \node[anchor=nw] at (9.2, 5.5) {Processes: 5};
+  \node[anchor=nw] at (9.2, 5.1) {Frames: 4};
+  \node[anchor=nw] at (9.2, 4.7) {Faults: 0};
+  \node[anchor=nw] at (9.2, 4.3) {Signals: 0};
+  \node[anchor=nw] at (9.2, 3.9) {System Score: N/A};
+  
+  % Footer
+  \draw (0,0) rectangle (12,0.5);
+  \node[anchor=west] at (0.2, 0.25) {Press 'h' for help | 'q' to quit | Use arrow keys to navigate};
+\end{tikzpicture}
+\caption{Layout TUI Dashboard}
+\label{fig:tui_layout}
+\end{figure}
+
+\subsection{Tính năng}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Real-time updates}: Cập nhật trạng thái tức thời
+  \item \textbf{Keyboard navigation}: Di chuyển bằng arrow keys
+  \item \textbf{Panel focus}: Tab để chuyển panel
+  \item \textbf{Quick access}: Phím tắt (h=help, q=quit, etc.)
+  \item \textbf{Color coding}: Hiển thị trạng thái bằng màu sắc
+\end{itemize}
+
+\section{GUI - Graphical User Interface}
+
+\subsection{Công nghệ}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Backend}: SDL2 (cross-platform graphics)
+  \item \textbf{UI Framework}: Dear ImGui (immediate mode GUI)
+  \item \textbf{Rendering}: Software rendering (không cần GPU)
+  \item \textbf{Font}: System font hoặc embedded font
+  \item \textbf{Theme}: Dark theme mặc định, support custom theme
+\end{itemize}
+
+\subsection{Các panel chính}
+
+\subsubsection{1. CPU Panel}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+  \draw (0,0) rectangle (10,6);
+  
+  \node[anchor=nw] at (0.2, 5.8) {\textbf{CPU Scheduler}};
+  
+  % Algorithm selection
+  \draw (0.2, 4.5) rectangle (3.5, 5.2);
+  \node[anchor=nw] at (0.3, 5.0) {Algorithm};
+  \node[anchor=nw] at (0.3, 4.7) {(Dropdown)};
+  
+  % Quantum input
+  \draw (3.8, 4.5) rectangle (5.5, 5.2);
+  \node[anchor=nw] at (3.9, 5.0) {Quantum};
+  \node[anchor=nw] at (3.9, 4.7) {[Input box]};
+  
+  % Run button
+  \draw (5.8, 4.5) rectangle (7, 5.2);
+  \node[anchor=center] at (6.4, 4.85) {Run};
+  
+  % Gantt chart
+  \draw (0.2, 1) rectangle (9.8, 4.3);
+  \node[anchor=nw] at (0.3, 4.1) {Gantt Chart:};
+  \node[anchor=center] at (5, 2.5) {[Gantt visualization here]};
+  
+  % Results
+  \node[anchor=nw] at (0.3, 0.7) {AWT: 8.33  |  ATT: 18.33  |  CPU Score: 72.5};
+  
+\end{tikzpicture}
+\caption{GUI - CPU Panel}
+\label{fig:gui_cpu}
+\end{figure}
+
+\textbf{Tính năng}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Dropdown chọn thuật toán
+  \item Input quantum (cho RR)
+  \item Gantt chart vẽ động
+  \item Hover trên bar hiển thị chi tiết
+  \item Zoom in/out
+  \item Export chart to PNG
+\end{itemize}
+
+\subsubsection{2. Memory Panel}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+  \draw (0,0) rectangle (10,6);
+  
+  \node[anchor=nw] at (0.2, 5.8) {\textbf{Memory Manager}};
+  
+  % Configuration
+  \draw (0.2, 4.8) rectangle (10.2, 5.5);
+  \node[anchor=nw] at (0.3, 5.2) {Policy: (Dropdown)};
+  \node[anchor=nw] at (2.5, 5.2) {Frames: (Spinner)};
+  \node[anchor=nw] at (5, 5.2) {[Run]};
+  
+  % Frame grid
+  \draw (0.2, 1.2) rectangle (10.2, 4.8);
+  \node[anchor=nw] at (0.3, 4.6) {Frame States (by time):};
+  \node[anchor=center] at (5, 3) {[Grid visualization]};
+  
+  % Stats
+  \node[anchor=nw] at (0.3, 0.8) {Faults: 5 | Hit Rate: 95\% | Fault Rate: 5\%};
+  \node[anchor=nw] at (0.3, 0.3) {Memory Score: 95.0};
+\end{tikzpicture}
+\caption{GUI - Memory Panel}
+\label{fig:gui_memory}
+\end{figure}
+
+\textbf{Tính năng}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Chọn policy (FIFO, LRU, OPT)
+  \item Tuỳ chỉnh số frames
+  \item Lưới khung trang theo thời gian
+  \item Color-coded pages (mỗi page ID có màu khác)
+  \item Scroll/pan lưới
+  \item Thống kê chi tiết
+\end{itemize}
+
+\subsubsection{3. IPC Panel}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Danh sách các signal events
+  \item Pipe status viewer
+  \item Send signal form
+  \item Event log
+\end{itemize}
+
+\subsubsection{4. Scenarios Panel}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Browse file
+  \item Load JSON scenario
+  \item Preview processes/memory config
+  \item Save results
+\end{itemize}
+
+\subsubsection{5. Score Panel}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Hiển thị CPU, Memory, IPC scores
+  \item System Stability Score
+  \item Score history (biểu đồ)
+  \item Export report
+\end{itemize}
+
+\subsection{Thiết kế visual}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Color scheme}: Dark theme (background #1e1e1e, accent #007acc)
+  \item \textbf{Typography}: monospace font cho code, sans-serif cho UI
+  \item \textbf{Icons}: Simple ASCII-based icons (⚙ ⚡ ▶ ⏹)
+  \item \textbf{Layout}: Responsive, adaptive to window size
+  \item \textbf{Animation}: Smooth transitions, no flicker
+\end{itemize}
+
+\section{Công cụ và thư viện}
+
+\subsection{Phụ thuộc GUI}
+
+\begin{table}[H]
+\centering
+\caption{Thư viện sử dụng cho GUI}
+\begin{tabular}{lll}
+\toprule
+\textbf{Thư viện} & \textbf{Phiên bản} & \textbf{Mục đích} \\
+\midrule
+SDL2 & 2.26.0+ & Graphics context, event handling \\
+Dear ImGui & 1.89+ & UI components \\
+nlohmann/json & 3.11.0+ & JSON parsing \\
+fmt & 10.0.0+ & String formatting \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Keyboard shortcuts}
+
+\begin{table}[H]
+\centering
+\caption{Phím tắt chính}
+\begin{tabular}{ll}
+\toprule
+\textbf{Phím} & \textbf{Hành động} \\
+\midrule
+\texttt{Ctrl+Q} / \texttt{ESC} & Quit \\
+\texttt{Tab} & Switch panel \\
+\texttt{Enter} & Run / Confirm \\
+\texttt{Space} & Play/Pause animation \\
+\texttt{Ctrl+S} & Save screenshot \\
+\texttt{Ctrl+O} & Open scenario \\
+\texttt{F1} & Help \\
+\texttt{+} / \texttt{-} & Zoom in/out \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage

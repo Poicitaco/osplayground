@@ -1,0 +1,219 @@
+% ============================================================================
+% CHƯƠNG 1: GIỚI THIỆU
+% ============================================================================
+
+\chapter{Giới thiệu}
+\label{ch:introduction}
+
+\section{Động cơ và lý do thực hiện}
+
+Hệ điều hành (Operating System) là một trong những môn học cơ bản và quan trọng nhất 
+trong chương trình đào tạo Khoa học máy tính và Công nghệ thông tin. Các khái niệm như 
+lập lịch CPU, quản lý bộ nhớ, giao tiếp liên tiến trình là những nền tảng không thể thiếu 
+để hiểu rõ cách máy tính hoạt động.
+
+Tuy nhiên, các khái niệm này thường được trình bày một cách trừu tượng trong giáo trình lý thuyết, 
+gây khó khăn cho sinh viên trong việc hình dung và thực hành. Một số thách thức chính:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Tính trừu tượng cao:} Các thuật toán lập lịch CPU, thay trang bộ nhớ 
+  thường chỉ được giải thích qua ví dụ tính tay trên giấy, không có công cụ tương tác để thử nghiệm.
+  
+  \item \textbf{Khó khăn trong hình dung:} Sinh viên khó tưởng tượng được cách các tiến trình 
+  chuyển đổi, bộ nhớ được chia sẻ, hoặc các tín hiệu được gửi trong hệ thống thực.
+  
+  \item \textbf{Thiếu công cụ học tập tương tác:} Không có nền tảng cho phép học sinh 
+  "chơi" với các khái niệm này một cách trực quan.
+  
+  \item \textbf{Khó so sánh:} Để so sánh hiệu năng của các thuật toán khác nhau 
+  trên cùng bộ dữ liệu đòi hỏi tính toán thủ công, tốn thời gian.
+\end{itemize}
+
+\textbf{OSPlayground} được sinh ra với mục đích giải quyết những thách thức này. 
+Nó cung cấp một môi trường mô phỏng hoàn chỉnh nơi các khái niệm OS không còn là những 
+ký hiệu trừu tượng mà trở thành những quá trình tương tác có thể quan sát, 
+thử nghiệm, và học hỏi trực tiếp.
+
+\section{Mục tiêu dự án}
+
+Mục tiêu chính của OSPlayground có thể được phân thành ba cấp độ:
+
+\subsection*{1. Mục tiêu giáo dục (Educational Goals)}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Trực quan hoá các thuật toán lập lịch CPU qua biểu đồ Gantt động, 
+  giúp sinh viên thấy rõ cách các tiến trình được xếp lịch trên CPU.
+  
+  \item Giáo dục về ảnh hưởng của các chỉ số hiệu năng (Average Waiting Time - AWT, 
+  Average Turnaround Time - ATT) trên tính công bằng và hiệu quả của lập lịch.
+  
+  \item Minh hoạ các chính sách thay trang bộ nhớ (FIFO, LRU, OPT) 
+  qua lưới khung trang tương tác, cho phép theo dõi page fault từng bước.
+  
+  \item Thực hành giao tiếp liên tiến trình thông qua Pipe và Signal 
+  trong một môi trường mô phỏng an toàn, kiểm soát.
+  
+  \item Học cách viết shell script với pipeline (command1 | command2 | command3) 
+  trên bộ lệnh mô phỏng.
+\end{enumerate}
+
+\subsection*{2. Mục tiêu kỹ thuật (Technical Goals)}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Xây dựng một kiến trúc phần mềm mô-đun, dễ mở rộng, 
+  trong đó mỗi khối (CPU, Memory, IPC) hoạt động độc lập nhưng có thể tích hợp.
+  
+  \item Cài đặt chính xác các thuật toán OS theo tiêu chuẩn, 
+  đảm bảo kết quả tính toán khớp với lý thuyết.
+  
+  \item Tạo giao diện người dùng đa cấp (CLI → TUI → GUI) 
+  để phục vụ các nhu cầu sử dụng khác nhau.
+  
+  \item Hỗ trợ tải kịch bản (Scenario) từ tệp JSON 
+  để đảm bảo tính tái lập và lưu trữ các test case.
+  
+  \item Triển khai hệ thống ghi log chi tiết 
+  để hỗ trợ debug, verify, và tạo báo cáo tự động.
+\end{enumerate}
+
+\subsection*{3. Mục tiêu phát triển (Development Goals)}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item Xây dựng dự án C++ tiêu chuẩn, 
+  sử dụng C++17, CMake, không phụ thuộc vào các framework nặng.
+  
+  \item Đảm bảo tính cross-platform: 
+  chạy được trên Windows (MSVC), Linux/WSL (GCC/Clang), macOS (Clang).
+  
+  \item Áp dụng các best practices: 
+  SOLID principles, design patterns, unit testing, documentation.
+  
+  \item Tạo một nền tảng có thể mở rộng cho các tính năng tương lai 
+  (networking simulation, virtual machine, advanced scheduling, ...).
+\end{enumerate}
+
+\section{Đóng góp chính của dự án}
+
+\subsection*{1. Bộ thuật toán CPU Scheduling}
+
+Dự án cài đặt 6 thuật toán lập lịch CPU chuẩn:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{FCFS (First Come First Serve)}: Đơn giản, không tiền nhiệm
+  \item \textbf{SJF (Shortest Job First)}: Tối ưu hoá AWT, không tiền nhiệm
+  \item \textbf{SRTF (Shortest Remaining Time First)}: Phiên bản tiền nhiệm của SJF
+  \item \textbf{RR (Round Robin)}: Công bằng thời gian, tiền nhiệm, có quantum
+  \item \textbf{Priority Non-preemptive}: Ưu tiên, không thể ngắt
+  \item \textbf{Priority Preemptive}: Ưu tiên, có thể ngắt khi công việc ưu tiên cao đến
+\end{itemize}
+
+Mỗi thuật toán cung cấp:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Biểu đồ Gantt (ASCII trong CLI, vector graphic trong GUI)
+  \item Tính toán AWT, ATT chính xác
+  \item Log chi tiết từng bước thực thi
+  \item So sánh performance trên cùng dataset
+\end{itemize}
+
+\subsection*{2. Bộ quản lý bộ nhớ}
+
+Dự án triển khai:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Paging}: Chia không gian nhớ logic thành trang, vật lý thành khung
+  \item \textbf{Segmentation}: Chia theo đoạn (segment)
+  \item \textbf{Dịch địa chỉ}: Ánh xạ logic → physical với kiểm tra biên
+  \item \textbf{3 chính sách thay trang}: FIFO, LRU, OPT
+  \item \textbf{Thống kê}: Page fault count, fault rate, frame states theo thời gian
+  \item \textbf{Trực quan}: Lưới khung trang (frame grid) tương tác theo thời gian
+\end{itemize}
+
+\subsection*{3. Mô-đun IPC và Signal}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Pipe}: Hàng đợi FIFO truyền chuỗi giữa tiến trình
+  \item \textbf{Signal}: Hỗ trợ SIGINT, SIGUSR1, SIGKILL
+  \item \textbf{Quản lý tín hiệu}: Xử lý, log sự kiện
+  \item \textbf{Ảnh hưởng tới điểm}: Các signal ảnh hưởng tới điểm số hệ thống
+\end{itemize}
+
+\subsection*{4. Shell mini với Pipeline}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{8+ lệnh}: ps, kill, sig, cpu, mem, cat, grep, wc, echo, ls
+  \item \textbf{Pipeline}: Kết nối lệnh bằng \texttt{|}
+  \item \textbf{Lệnh tương tác}: Có thể gửi signal, chạy thuật toán từ shell
+  \item \textbf{Output processing}: Xử lý và biến đổi output qua pipeline
+\end{itemize}
+
+\subsection*{5. Giao diện đa cấp}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{CLI}: Giao diện dòng lệnh cơ bản, nhanh gọn
+  \item \textbf{TUI}: Dashboard tương tác với menu, menu con, trạng thái tức thời
+  \item \textbf{GUI}: Giao diện đồ hoạ SDL2/ImGui với:
+  \begin{itemize}
+    \item Biểu đồ Gantt động (CPU panel)
+    \item Lưới khung trang tương tác (Memory panel)
+    \item Panel IPC, Scenarios, Score
+    \item Dark theme, responsive layout, font system
+  \end{itemize}
+\end{itemize}
+
+\subsection*{6. Hệ thống điểm tổng hợp}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{CPU Score}: Dựa trên AWT, ATT (công thức chuẩn hoá)
+  \item \textbf{Memory Score}: Dựa trên fault rate
+  \item \textbf{IPC Score}: Dựa trên số lần kill/signal
+  \item \textbf{System Stability Score}: Trung bình có trọng số của 3 điểm trên
+\end{itemize}
+
+\section{Phạm vi và giới hạn}
+
+\subsection*{Phạm vi}
+
+Dự án tập trung vào các khái niệm OS cốt lõi được dạy trong khóa học Hệ điều hành tiêu chuẩn:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Lập lịch CPU (single-core model)
+  \item Quản lý bộ nhớ ảo (virtual memory basics)
+  \item IPC cơ bản (pipes, signals)
+  \item Shell scripting cơ bản
+\end{itemize}
+
+\subsection*{Giới hạn}
+
+Để giữ dự án có kích thước hợp lý và tập trung, các khía cạnh sau được ngoài phạm vi:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{Không phải kernel thực}: Đây là mô phỏng user-space, không bao gồm bootloader, 
+  interrupt handler, MMU driver thật
+  \item \textbf{Không hỗ trợ multi-core}: Mô hình một lõi CPU duy nhất
+  \item \textbf{Không có device I/O}: Không mô phỏng disk, network, thiết bị ngoại vi
+  \item \textbf{Không hỗ trợ thread}: Chỉ mô phỏng tiến trình (process), không thread
+  \item \textbf{Không có file system}: Không triển khai filesystem tương tác
+  \item \textbf{Không hỗ trợ network}: Không mô phỏng network stack
+\end{itemize}
+
+\section{Cấu trúc báo cáo}
+
+Báo cáo được tổ chức thành 13 chương chính:
+
+\begin{description}[leftmargin=2cm,style=nextline]
+  \item[\textbf{Chương 1 - Giới thiệu}] Động cơ, mục tiêu, đóng góp
+  \item[\textbf{Chương 2 - Cơ sở lý thuyết}] Kiến thức nền tảng, công thức toán học
+  \item[\textbf{Chương 3 - Yêu cầu và phạm vi}] Thông số kỹ thuật, ràng buộc
+  \item[\textbf{Chương 4 - Kiến trúc}] Thiết kế tổng thể, flow dữ liệu
+  \item[\textbf{Chương 5 - Chi tiết CPU}] Thuật toán, cài đặt, Gantt
+  \item[\textbf{Chương 6 - Chi tiết Memory}] Dịch địa chỉ, thay trang
+  \item[\textbf{Chương 7 - Chi tiết IPC}] Pipe, Signal, Shell
+  \item[\textbf{Chương 8 - Hệ thống điểm}] Công thức, phương pháp đánh giá
+  \item[\textbf{Chương 9 - Giao diện}] CLI, TUI, GUI
+  \item[\textbf{Chương 10 - Hướng dẫn sử dụng}] Build, chạy, flow
+  \item[\textbf{Chương 11 - Kiểm thử}] Unit test, functional test
+  \item[\textbf{Chương 12 - Kết quả}] Dữ liệu, biểu đồ, so sánh
+  \item[\textbf{Chương 13 - Kết luận}] Tổng kết, hướng phát triển
+\end{description}
+
+\clearpage

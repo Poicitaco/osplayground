@@ -1,0 +1,415 @@
+% ============================================================================
+% CHƯƠNG 5: CHI TIẾT CPU SCHEDULING
+% ============================================================================
+
+\chapter{Thiết kế chi tiết - CPU Scheduling}
+\label{ch:cpu_detail}
+
+\section{Mô hình dữ liệu}
+
+\subsection{Struct Process}
+
+\begin{lstlisting}[language=C++,caption={Cấu trúc Process}]
+struct Process {
+  int pid;              // Process ID (1-based)
+  int arrival;          // Thời điểm đến CPU ready queue
+  int burst;            // Thời gian CPU cần
+  int priority;         // Mức ưu tiên (1-40, nhỏ hơn = cao hơn)
+  
+  // Kết quả tính toán
+  int start_time;       // Lúc bắt đầu chạy
+  int finish_time;      // Lúc hoàn thành
+  int wait_time;        // start_time - arrival
+  int turnaround_time;  // finish_time - arrival
+  
+  // Trạng thái
+  ProcessState state;   // New, Ready, Running, Terminated
+  int remaining_time;   // Thời gian còn lại (cho preemptive)
+};
+\end{lstlisting}
+
+\subsection{Struct GanttEntry và Result}
+
+\begin{lstlisting}[language=C++,caption={Gantt Chart và Result}]
+struct GanttEntry {
+  int pid;       // Process ID
+  int start;     // Start time
+  int finish;    // Finish time
+  
+  GanttEntry(int p, int s, int f) 
+    : pid(p), start(s), finish(f) {}
+};
+
+struct Result {
+  double awt;                    // Average Waiting Time
+  double att;                    // Average Turnaround Time
+  vector<GanttEntry> gantt;      // Biểu đồ Gantt
+  vector<Process> processes;     // Danh sách tiến trình có kết quả
+  vector<string> execution_log;  // Log chi tiết từng bước
+  int total_time;                // Tổng thời gian simulation
+  int cpu_idle_time;             // Thời gian CPU rỗi
+  double cpu_utilization;        // % sử dụng CPU
+};
+\end{lstlisting}
+
+\section{FCFS - First Come First Serve}
+
+\subsection{Nguyên lý}
+
+FCFS sắp xếp các tiến trình theo thứ tự arrival time. Tiến trình nào đến trước phục vụ trước.
+
+\textbf{Tính chất}:
+\begin{itemize}[leftmargin=1.5cm]
+  \item Non-preemptive: Không ngắt tiến trình đang chạy
+  \item FIFO: Kiểu hàng đợi tự nhiên
+  \item Dễ cài đặt nhưng dễ gây Convoy Effect
+\end{itemize}
+
+\subsection{Giả mã và cài đặt}
+
+\begin{lstlisting}[language=C++,caption={Cài đặt FCFS}]
+Result Scheduler::runFCFS(const vector<Process>& procs) {
+  vector<Process> processes = procs;
+  
+  // Sắp xếp theo arrival time, rồi PID
+  sort(processes.begin(), processes.end(), 
+    [](const Process& a, const Process& b) {
+      if (a.arrival != b.arrival) return a.arrival < b.arrival;
+      return a.pid < b.pid;
+    });
+  
+  Result result;
+  result.gantt.clear();
+  
+  int current_time = 0;
+  double sum_awt = 0, sum_att = 0;
+  
+  for (auto& p : processes) {
+    // Nếu CPU rỗi, chờ tới arrival time tiếp theo
+    if (current_time < p.arrival) {
+      result.execution_log.push_back(
+        "CPU idle from " + to_string(current_time) 
+        + " to " + to_string(p.arrival));
+      current_time = p.arrival;
+    }
+    
+    // Tiến trình p chạy
+    p.start_time = current_time;
+    p.finish_time = current_time + p.burst;
+    p.wait_time = p.start_time - p.arrival;
+    p.turnaround_time = p.finish_time - p.arrival;
+    
+    result.gantt.push_back(
+      GanttEntry(p.pid, p.start_time, p.finish_time));
+    
+    result.execution_log.push_back(
+      "P" + to_string(p.pid) + ": start=" + to_string(p.start_time)
+      + ", finish=" + to_string(p.finish_time)
+      + ", wait=" + to_string(p.wait_time));
+    
+    current_time = p.finish_time;
+    sum_awt += p.wait_time;
+    sum_att += p.turnaround_time;
+  }
+  
+  result.awt = sum_awt / processes.size();
+  result.att = sum_att / processes.size();
+  result.processes = processes;
+  result.total_time = current_time;
+  
+  return result;
+}
+\end{lstlisting}
+
+\section{SJF - Shortest Job First}
+
+\subsection{Nguyên lý}
+
+Tại mỗi lần CPU rỗi, chọn tiến trình có burst time nhỏ nhất trong số những tiến trình 
+đã đến. SJF tối ưu hoá AWT trong tất cả non-preemptive algorithms.
+
+\subsection{Giả mã}
+
+\begin{lstlisting}[language=C++,caption={Cài đặt SJF}]
+Result Scheduler::runSJF(const vector<Process>& procs) {
+  vector<Process> processes = procs;
+  Result result;
+  
+  vector<bool> done(processes.size(), false);
+  int current_time = 0;
+  int completed = 0;
+  
+  while (completed < processes.size()) {
+    // Tìm tiến trình chưa xong có burst nhỏ nhất, arrival <= current_time
+    int next_idx = -1;
+    int min_burst = INT_MAX;
+    
+    for (int i = 0; i < processes.size(); ++i) {
+      if (!done[i] && processes[i].arrival <= current_time) {
+        if (processes[i].burst < min_burst) {
+          min_burst = processes[i].burst;
+          next_idx = i;
+        }
+      }
+    }
+    
+    if (next_idx == -1) {
+      // Không có tiến trình sẵn sàng, CPU rỗi
+      // Tìm arrival time sớm nhất tiếp theo
+      int next_arrival = INT_MAX;
+      for (int i = 0; i < processes.size(); ++i) {
+        if (!done[i] && processes[i].arrival > current_time) {
+          next_arrival = min(next_arrival, processes[i].arrival);
+        }
+      }
+      if (next_arrival != INT_MAX) {
+        result.execution_log.push_back(
+          "CPU idle from " + to_string(current_time) 
+          + " to " + to_string(next_arrival));
+        current_time = next_arrival;
+      }
+    } else {
+      // Chạy tiến trình next_idx
+      Process& p = processes[next_idx];
+      p.start_time = current_time;
+      p.finish_time = current_time + p.burst;
+      p.wait_time = p.start_time - p.arrival;
+      p.turnaround_time = p.finish_time - p.arrival;
+      
+      result.gantt.push_back(
+        GanttEntry(p.pid, p.start_time, p.finish_time));
+      
+      result.execution_log.push_back(
+        "P" + to_string(p.pid) + ": burst=" + to_string(p.burst));
+      
+      current_time = p.finish_time;
+      done[next_idx] = true;
+      completed++;
+    }
+  }
+  
+  // Tính trung bình
+  double sum_awt = 0, sum_att = 0;
+  for (const auto& p : processes) {
+    sum_awt += p.wait_time;
+    sum_att += p.turnaround_time;
+  }
+  result.awt = sum_awt / processes.size();
+  result.att = sum_att / processes.size();
+  result.processes = processes;
+  result.total_time = current_time;
+  
+  return result;
+}
+\end{lstlisting}
+
+\section{SRTF - Shortest Remaining Time First}
+
+\subsection{Nguyên lý}
+
+Phiên bản preemptive của SJF. Tại mỗi tick thời gian (hoặc khi tiến trình mới đến), 
+CPU chọn tiến trình có remaining time nhỏ nhất. Nếu tiến trình mới có remaining time 
+nhỏ hơn tiến trình đang chạy, ngắt tiến trình hiện tại.
+
+\subsection{Đặc điểm}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Tối ưu hoá ATT trong tất cả preemptive algorithms
+  \item Chi phí context switch cao nếu mô phỏng quá chi tiết (mỗi tick)
+  \item Gây starvation cho tiến trình dài
+  \item Yêu cầu biết trước burst time (không thực tế)
+\end{itemize}
+
+\section{Round Robin (RR)}
+
+\subsection{Nguyên lý}
+
+Mỗi tiến trình được cấp CPU một time slice (quantum) cố định. Nếu tiến trình không 
+hoàn thành trong quantum, nó được đặt ở cuối hàng đợi sẵn sàng.
+
+\begin{lstlisting}[language=C++,caption={Cài đặt Round Robin}]
+Result Scheduler::runRR(const vector<Process>& procs, int quantum) {
+  vector<Process> processes = procs;
+  Result result;
+  
+  queue<int> ready_queue;
+  vector<int> remaining_time(processes.size());
+  
+  for (int i = 0; i < processes.size(); ++i) {
+    remaining_time[i] = processes[i].burst;
+  }
+  
+  int current_time = 0;
+  int completed = 0;
+  
+  // Đưa tất cả tiến trình arrive tại thời điểm 0 vào hàng đợi
+  for (int i = 0; i < processes.size(); ++i) {
+    if (processes[i].arrival == current_time) {
+      ready_queue.push(i);
+    }
+  }
+  
+  while (completed < processes.size()) {
+    if (ready_queue.empty()) {
+      // Tìm tiến trình sớm nhất arrive
+      int next_arrival = INT_MAX;
+      int next_idx = -1;
+      for (int i = 0; i < processes.size(); ++i) {
+        if (processes[i].arrival > current_time && 
+            remaining_time[i] > 0) {
+          if (processes[i].arrival < next_arrival) {
+            next_arrival = processes[i].arrival;
+            next_idx = i;
+          }
+        }
+      }
+      if (next_idx != -1) {
+        current_time = next_arrival;
+        ready_queue.push(next_idx);
+      }
+    } else {
+      int idx = ready_queue.front();
+      ready_queue.pop();
+      
+      int time_slice = min(quantum, remaining_time[idx]);
+      processes[idx].start_time = (processes[idx].start_time == 0) 
+                                   ? current_time 
+                                   : processes[idx].start_time;
+      
+      current_time += time_slice;
+      remaining_time[idx] -= time_slice;
+      
+      // Đưa các tiến trình arrive vào hàng đợi
+      for (int i = 0; i < processes.size(); ++i) {
+        if (processes[i].arrival == current_time && 
+            remaining_time[i] > 0 && i != idx) {
+          ready_queue.push(i);
+        }
+      }
+      
+      if (remaining_time[idx] == 0) {
+        processes[idx].finish_time = current_time;
+        processes[idx].wait_time = processes[idx].finish_time 
+                                  - processes[idx].arrival 
+                                  - processes[idx].burst;
+        processes[idx].turnaround_time = processes[idx].finish_time 
+                                        - processes[idx].arrival;
+        result.gantt.push_back(
+          GanttEntry(processes[idx].pid, 
+                     processes[idx].start_time, 
+                     current_time));
+        completed++;
+      } else {
+        result.gantt.push_back(
+          GanttEntry(processes[idx].pid, 
+                     current_time - time_slice, 
+                     current_time));
+        ready_queue.push(idx);
+      }
+    }
+  }
+  
+  // Tính trung bình
+  double sum_awt = 0, sum_att = 0;
+  for (const auto& p : processes) {
+    sum_awt += p.wait_time;
+    sum_att += p.turnaround_time;
+  }
+  result.awt = sum_awt / processes.size();
+  result.att = sum_att / processes.size();
+  result.processes = processes;
+  result.total_time = current_time;
+  
+  return result;
+}
+\end{lstlisting}
+
+\subsection{Ảnh hưởng của quantum}
+
+\begin{table}[H]
+\centering
+\caption{Ảnh hưởng của Quantum trên RR}
+\begin{tabular}{lll}
+\toprule
+\textbf{Quantum} & \textbf{Ưu điểm} & \textbf{Nhược điểm} \\
+\midrule
+Quá nhỏ (1-2 units) & Response time tốt & Context switch overhead cao \\
+Vừa phải (4-8 units) & Cân bằng & Phù hợp hầu hết trường hợp \\
+Quá lớn (>100 units) & Overhead thấp & Giống FCFS hơn, response tệ \\
+\bottomrule
+\end{tabular}
+\label{tab:quantum_effect}
+\end{table}
+
+\section{Priority Scheduling}
+
+\subsection{Non-preemptive Priority}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Mỗi tiến trình có priority number (1-40, nhỏ = cao)
+  \item Chọn tiến trình ưu tiên cao nhất trong hàng đợi sẵn sàng
+  \item Chạy cho đến kết thúc
+\end{itemize}
+
+\subsection{Preemptive Priority}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Nếu tiến trình mới đến có priority cao hơn tiến trình đang chạy, ngắt
+  \item Tiến trình bị ngắt quay lại hàng đợi sẵn sàng
+\end{itemize}
+
+\subsection{Vấn đề Starvation và Aging}
+
+\textbf{Starvation}: Tiến trình ưu tiên thấp có thể chờ vô hạn.
+
+\textbf{Giải pháp Aging}: Tăng dần priority của tiến trình theo thời gian chờ.
+
+\begin{equation}
+\text{current\_priority}(t) = \text{original\_priority} - \left\lfloor \frac{t}{k} \right\rfloor
+\end{equation}
+
+Với $k$ là hằng số aging factor (ví dụ: k=10).
+
+\section{Vẽ Gantt Chart}
+
+\subsection{ASCII Gantt (CLI)}
+
+\begin{lstlisting}[language=C++,caption={Vẽ Gantt ASCII}]
+void printGanttASCII(const vector<GanttEntry>& gantt) {
+  // Vẽ timeline
+  cout << "\nGantt Chart:\n";
+  cout << " ";
+  for (int t = 0; t <= getMaxTime(gantt); ++t) {
+    cout << setw(3) << t;
+  }
+  cout << "\n";
+  
+  // Vẽ bar
+  cout << " |";
+  for (const auto& entry : gantt) {
+    int width = entry.finish - entry.start;
+    cout << setw(width) << ("P" + to_string(entry.pid)) << "|";
+  }
+  cout << "\n";
+  
+  // Vẽ time scale
+  cout << " ";
+  for (const auto& entry : gantt) {
+    cout << entry.start << setw(entry.finish - entry.start) << entry.finish;
+  }
+  cout << "\n";
+}
+\end{lstlisting}
+
+\subsection{Vector Graphic Gantt (GUI)}
+
+GUI sử dụng ImGui để vẽ Gantt chart:
+\begin{itemize}[leftmargin=1.5cm]
+  \item X-axis: time
+  \item Y-axis: process ID
+  \item Mỗi entry là một hình chữ nhật có màu khác nhau
+  \item Hover hiển thị chi tiết entry
+  \item Zoom, pan, export hình ảnh
+\end{itemize}
+
+\clearpage

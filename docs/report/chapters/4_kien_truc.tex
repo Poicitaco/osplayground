@@ -1,0 +1,374 @@
+% ============================================================================
+% CHƯƠNG 4: KIẾN TRÚC HỆ THỐNG
+% ============================================================================
+
+\chapter{Kiến trúc hệ thống}
+\label{ch:architecture}
+
+\section{Tổng quan kiến trúc}
+
+OSPlayground được thiết kế theo mô hình \textbf{mô-đun hóa (modular architecture)}, 
+trong đó mỗi khối chức năng độc lập nhưng liên kết với nhau qua interface rõ ràng.
+
+\subsection{Sơ đồ kiến trúc cấp cao}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[>=Stealth, node distance=1cm, every node/.style={draw, rounded corners, align=center, minimum width=3cm, minimum height=1cm}]
+  % Layer 1 - UI
+  \node[fill=blue!20] (cli) {CLI\\Engine};
+  \node[fill=blue!20, right=1.5cm of cli] (tui) {TUI\\Dashboard};
+  \node[fill=blue!20, right=1.5cm of tui] (gui) {GUI\\SDL2/ImGui};
+  
+  % Layer 2 - Core Modules
+  \node[fill=green!20, below=2cm of cli] (cpu_mod) {CPU\\Scheduler};
+  \node[fill=green!20, right=1.5cm of cpu_mod] (mem_mod) {Memory\\Manager};
+  \node[fill=green!20, right=1.5cm of mem_mod] (ipc_mod) {IPC\\Pipe/Signal};
+  \node[fill=green!20, right=1.5cm of ipc_mod] (shell_mod) {Shell\\Parser};
+  
+  % Layer 3 - Core System
+  \node[fill=yellow!20, below=2cm of mem_mod, minimum width=12cm] (core_sys) {Core System (CPU/MEM/IPC Stats, System State)};
+  
+  % Layer 4 - Utils
+  \node[fill=gray!20, below=1.5cm of core_sys, minimum width=12cm] (utils) {Utils (Logging, File I/O, JSON Parsing)};
+  
+  % Connections from UI to Modules
+  \draw[->] (cli) -- (cpu_mod);
+  \draw[->] (tui) -- (mem_mod);
+  \draw[->] (gui) -- (ipc_mod);
+  \draw[->] (gui) -- (shell_mod);
+  
+  % Connections from Modules to Core
+  \draw[->] (cpu_mod) -- (core_sys);
+  \draw[->] (mem_mod) -- (core_sys);
+  \draw[->] (ipc_mod) -- (core_sys);
+  \draw[->] (shell_mod) -- (core_sys);
+  
+  % Connections from Core to Utils
+  \draw[->] (core_sys) -- (utils);
+  
+  % Back connections
+  \draw[<-] (shell_mod) -- (core_sys);
+  
+\end{tikzpicture}
+\caption{Sơ đồ kiến trúc cấp cao OSPlayground}
+\label{fig:arch_highlevel}
+\end{figure}
+
+\section{Cấu trúc thư mục dự án}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\ttfamily\small]
+\node[anchor=west] (root) at (0,0) {OSPlayground/};
+\node[anchor=west] at (1,-0.5) {├── CMakeLists.txt};
+\node[anchor=west] at (1,-1) {├── main.cpp};
+\node[anchor=west] at (1,-1.5) {├── assets/};
+\node[anchor=west] at (2,-2) {│   ├── scenarios/};
+\node[anchor=west] at (3,-2.4) {│   │   └── demo\_cpu.json};
+\node[anchor=west] at (2,-2.8) {│   └── logs/};
+\node[anchor=west] at (1,-3.2) {├── engine/};
+\node[anchor=west] at (2,-3.6) {│   ├── loop.cpp, loop.h};
+\node[anchor=west] at (1,-4) {├── sim/};
+\node[anchor=west] at (2,-4.4) {│   ├── cpu/ (Schedulers)};
+\node[anchor=west] at (2,-4.8) {│   ├── mem/ (Paging/Segmentation)};
+\node[anchor=west] at (2,-5.2) {│   ├── ipc/ (Pipe/Signal)};
+\node[anchor=west] at (2,-5.6) {│   ├── shell/ (Shell Parser)};
+\node[anchor=west] at (2,-6) {│   └── core/ (System State)};
+\node[anchor=west] at (1,-6.4) {├── ui/};
+\node[anchor=west] at (2,-6.8) {│   ├── cli/ (CLI Interface)};
+\node[anchor=west] at (2,-7.2) {│   ├── tui/ (TUI Dashboard)};
+\node[anchor=west] at (2,-7.6) {│   └── gfx/ (GUI SDL2/ImGui)};
+\node[anchor=west] at (1,-8) {├── utils/};
+\node[anchor=west] at (2,-8.4) {│   ├── log.cpp, log.h};
+\node[anchor=west] at (2,-8.8) {│   └── file.cpp, file.h};
+\node[anchor=west] at (1,-9.2) {├── tests/};
+\node[anchor=west] at (2,-9.6) {│   ├── cpu\_test.cpp};
+\node[anchor=west] at (2,-10) {│   ├── mem\_test.cpp};
+\node[anchor=west] at (2,-10.4) {│   └── ipc\_test.cpp};
+\node[anchor=west] at (1,-10.8) {└── docs/};
+\node[anchor=west] at (2,-11.2) {    └── report/ (Báo cáo này)};
+\end{tikzpicture}
+\caption{Cấu trúc thư mục dự án}
+\label{fig:directory_structure}
+\end{figure}
+
+\section{Các mô-đun chính}
+
+\subsection{1. Mô-đul CPU Scheduler (\texttt{sim/cpu/})}
+
+\textbf{Trách nhiệm}: Cài đặt các thuật toán lập lịch CPU.
+
+\textbf{Giao diện chính}:
+\begin{lstlisting}[language=C++,caption={CPU Scheduler API}]
+class Process {
+  int pid, arrival, burst, priority;
+  int wait_time, turnaround_time, start, finish;
+};
+
+struct GanttEntry { int pid; int start; int finish; };
+
+class Scheduler {
+  Result runFCFS(const vector<Process>& procs);
+  Result runSJF(const vector<Process>& procs);
+  Result runSRTF(const vector<Process>& procs);
+  Result runRR(const vector<Process>& procs, int quantum);
+  Result runPriorityNP(const vector<Process>& procs);
+  Result runPriorityP(const vector<Process>& procs);
+  
+  vector<GanttEntry> getGantt() const;
+  double getAWT() const;
+  double getATT() const;
+};
+
+struct Result {
+  double awt, att;
+  vector<GanttEntry> gantt;
+  vector<string> log;  // Chi tiết từng bước
+};
+\end{lstlisting}
+
+\subsection{2. Mô-đul Memory Manager (\texttt{sim/mem/})}
+
+\textbf{Trách nhiệm}: Mô phỏng quản lý bộ nhớ (paging/segmentation, thay trang).
+
+\textbf{Giao diện chính}:
+\begin{lstlisting}[language=C++,caption={Memory Manager API}]
+class MMU {  // Memory Management Unit
+  PhysicalAddress translate(LogicalAddress logical);
+  bool isValidAddress(LogicalAddress addr) const;
+};
+
+class PageReplacer {
+  void loadPage(int page, int physicalFrame);
+  int selectVictim(int currentTime);  // Tuỳ theo chính sách
+};
+
+class MemorySimulator {
+  Result runFIFO(int frames, vector<int> references);
+  Result runLRU(int frames, vector<int> references);
+  Result runOPT(int frames, vector<int> references);
+  
+  int getFaultCount() const;
+  double getFaultRate() const;
+  const vector<vector<int>>& getFrameStates() const;
+};
+
+struct Result {
+  int faults, steps;
+  vector<vector<int>> frame_states;  // [step][frame] = page_id
+  vector<string> log;
+};
+\end{lstlisting}
+
+\subsection{3. Mô-đul IPC (\texttt{sim/ipc/})}
+
+\textbf{Trách nhiệm}: Mô phỏng giao tiếp liên tiến trình (Pipe, Signal).
+
+\textbf{Giao diện chính}:
+\begin{lstlisting}[language=C++,caption={IPC API}]
+class Pipe {
+  void write(const string& data);
+  string read(int count);
+  bool isEmpty() const;
+  bool isFull() const;
+};
+
+enum Signal { SIGINT, SIGUSR1, SIGKILL };
+
+class SignalHandler {
+  void sendSignal(int pid, Signal sig);
+  void handleSignal(int pid, Signal sig);
+};
+
+class IPCManager {
+  void createPipe(int id);
+  void sendSignal(int pid, Signal sig);
+  const vector<SignalEvent>& getEvents() const;
+};
+
+struct SignalEvent {
+  int pid, time;
+  Signal sig;
+  bool handled;
+};
+\end{lstlisting}
+
+\subsection{4. Mô-đul Shell (\texttt{sim/shell/})}
+
+\textbf{Trách nhiệm}: Phân tích cú pháp dòng lệnh và thực thi lệnh.
+
+\textbf{Giao diện chính}:
+\begin{lstlisting}[language=C++,caption={Shell API}]
+class ShellParser {
+  vector<Command> parseLine(const string& line);
+  bool isValidPipeline(const vector<Command>& cmds) const;
+};
+
+class ShellExecutor {
+  vector<string> executePipeline(const vector<Command>& cmds);
+  vector<string> executeCommand(const Command& cmd);
+};
+
+struct Command {
+  string name;  // "ps", "cpu", "kill", ...
+  vector<string> args;
+};
+\end{lstlisting}
+
+\subsection{5. Mô-đul Core System (\texttt{sim/core/})}
+
+\textbf{Trách nhiệm}: Quản lý trạng thái hệ thống toàn cục.
+
+\textbf{Giao diện chính}:
+\begin{lstlisting}[language=C++,caption={Core System API}]
+class SystemState {
+  // Process management
+  int createProcess(const Process& p);
+  void killProcess(int pid);
+  vector<Process> getAllProcesses() const;
+  
+  // Scoring
+  double computeCPUScore() const;
+  double computeMemoryScore() const;
+  double computeIPCScore() const;
+  double computeSystemScore() const;  // Weighted average
+  
+  // State
+  const Scheduler& getCPUScheduler() const;
+  const MemorySimulator& getMemory() const;
+  const IPCManager& getIPC() const;
+};
+\end{lstlisting}
+
+\section{Luồng dữ liệu}
+
+\subsection{Luồng chạy CPU Scheduling}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Input}: Danh sách tiến trình từ kịch bản JSON
+  \item \textbf{Parsing}: CLI/GUI đọc JSON, tạo objects Process
+  \item \textbf{Execution}: Scheduler.run*() xử lý, tạo Gantt, tính AWT/ATT
+  \item \textbf{Output}: Kết quả được lưu vào SystemState
+  \item \textbf{Visualization}: GUI vẽ Gantt chart, hiển thị chỉ số
+  \item \textbf{Logging}: Tất cả chi tiết được ghi vào log
+\end{enumerate}
+
+\subsection{Luồng chạy Memory Simulation}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Input}: Số khung (frames) và reference string từ JSON
+  \item \textbf{Parsing}: Chuyển đổi input thành dạng xử lý được
+  \item \textbf{Simulation}: MemorySimulator chạy chính sách thay trang, tính fault
+  \item \textbf{State Tracking}: Lưu trạng thái khung ở mỗi bước
+  \item \textbf{Output}: Fault count, frame\_states, log
+  \item \textbf{Visualization}: GUI vẽ lưới khung trang
+\end{enumerate}
+
+\subsection{Luồng xử lý Shell Command}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Input}: Người dùng gõ lệnh vào CLI
+  \item \textbf{Parsing}: ShellParser tách lệnh và argument
+  \item \textbf{Validation}: Kiểm tra cú pháp, số lượng argument
+  \item \textbf{Execution}: ShellExecutor gọi hàm tương ứng
+  \item \textbf{Pipeline}: Nếu có \verb+|+, truyền output qua các lệnh
+  \item \textbf{Output}: In kết quả lên CLI
+\end{enumerate}
+
+\section{Các design patterns sử dụng}
+
+\subsection{1. Strategy Pattern}
+
+Các thuật toán lập lịch được triển khai dưới dạng các strategy khác nhau:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Giao diện chung: \texttt{ISchedulingStrategy}
+  \item Implementations: \texttt{FCFSStrategy}, \texttt{SJFStrategy}, ...
+  \item Context: \texttt{Scheduler} chọn strategy theo parameter
+\end{itemize}
+
+\subsection{2. Factory Pattern}
+
+Tạo đối tượng Scheduler, MemorySimulator, IPCManager:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{SchedulerFactory::create(type, params)}
+  \item \texttt{MemoryFactory::create(type, frames)}
+\end{itemize}
+
+\subsection{3. Observer Pattern}
+
+GUI theo dõi sự thay đổi của SystemState:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item SystemState phát ra events
+  \item GUI panels đăng ký nhận events
+  \item Khi dữ liệu thay đổi, panels tự động cập nhật
+\end{itemize}
+
+\subsection{4. Command Pattern}
+
+Shell commands được biểu diễn dưới dạng Command objects:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \texttt{ICommand} interface
+  \item Implementations: \texttt{PSCommand}, \texttt{CPUCommand}, ...
+  \item \texttt{CommandInvoker} thực thi commands
+\end{itemize}
+
+\section{Giao tiếp giữa các mô-đul}
+
+\subsection{Từ CPU sang Core System}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Scheduler.run*() hoàn thành → kết quả
+  \item SystemState::setCPUResult() lưu kết quả
+  \item Tính CPU Score dựa trên AWT/ATT
+\end{itemize}
+
+\subsection{Từ Memory sang Core System}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item MemorySimulator.run*() hoàn thành → frame\_states, faults
+  \item SystemState::setMemoryResult() lưu kết quả
+  \item Tính Memory Score dựa trên fault rate
+\end{itemize}
+
+\subsection{Từ IPC sang Core System}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item IPCManager ghi nhận signal events
+  \item SystemState theo dõi events
+  \item Tính IPC Score dựa trên số kills
+\end{itemize}
+
+\subsection{Từ Shell sang Core System}
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item Shell parser các lệnh, cập nhật SystemState trực tiếp
+  \item Ví dụ: \verb|kill 5| → gọi SystemState::killProcess(5)
+  \item Ví dụ: \verb|cpu srtf| → gọi Scheduler.runSRTF()
+\end{itemize}
+
+\section{Công thức hệ thống điểm}
+
+Hệ thống tính điểm dựa trên ba thành phần:
+
+\begin{equation}
+\text{CPU Score} = 100 \cdot \frac{B}{B + (\text{AWT} + \text{ATT})}, \quad B = 20
+\end{equation}
+
+\begin{equation}
+\text{Memory Score} = 100 \times \left(1 - \frac{\text{faults}}{\text{steps}}\right)
+\end{equation}
+
+\begin{equation}
+\text{IPC Score} = \max\left(0, 100 - 15 \times \text{kills}\right)
+\end{equation}
+
+\begin{equation}
+\text{System Stability Score} = 0.4 \times \text{CPU} + 0.4 \times \text{Memory} + 0.2 \times \text{IPC}
+\end{equation}
+
+\clearpage
